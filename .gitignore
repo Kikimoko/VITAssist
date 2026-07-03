@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+
+# macOS
+.DS_Store
+
+# VITAssist downloaded notes
+Artificial Intelligence/
+Cloud Architecture Design/
+Compiler Design/
+Computer Networks Lab/
+Cryptography and Network Security/
+Digital Forensics/
+Digital Watermarking and Steganography/
+Information Security/
+Operating Systems Lab/
+Penetration Testing and Vulnerability Analysis/
+Database Systems/
+Compiler Design Lab/
+Data Privacy/
+Digital Forensics Lab/
+Embedded Systems/
+Software Engineering/
+Spanish I/
+Web Application Security/
