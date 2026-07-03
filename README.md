@@ -1,125 +1,218 @@
-# VITAssist
+<div align="center">
 
-A Chrome extension for VIT students that auto-organises VTOP study materials and enables on-device AI-powered exam prep. Zero cost, zero setup, fully private.
+# 🎓 VITAssist
+
+### AI-Powered Chrome Extension for Organizing & Learning from VIT Study Materials
+
+Automatically organize VTOP study materials, search lecture content, ask AI questions, generate revision notes, and create quizzes—all from a single Chrome side panel.
+
+<br/>
+
+<img src="https://skillicons.dev/icons?i=react,vite,javascript,css,git,github" />
+
+<br/><br/>
+
+<img src="https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white"/>
+<img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
+<img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
+<img src="https://img.shields.io/badge/Google-Gemini_AI-8E75FF?style=for-the-badge&logo=google&logoColor=white"/>
+
+</div>
 
 ---
 
-## Quick start
+# 📖 About
+
+VITAssist is a Chrome Extension built to improve the way VIT students manage and study course materials downloaded from VTOP.
+
+The extension automatically organizes downloaded PDFs and PowerPoint presentations, indexes their contents locally, and provides AI-assisted study tools such as semantic search, contextual question answering, revision note generation, and quiz generation.
+
+---
+
+# ✨ Features
+
+- 📂 Automatically organizes downloaded VTOP study materials by subject
+- 🔎 Searches inside PDFs and PowerPoint presentations using lecture content
+- 🤖 AI-powered Question Answering using Lightweight Retrieval-Augmented Generation (RAG)
+- 📚 Context-aware answers generated only from your downloaded study materials
+- 📝 Generate concise revision notes from individual lectures
+- 🧠 Generate multiple-choice quizzes from any selected lecture
+- 📖 Browse indexed study materials through an integrated library
+- ⚡ Chrome Side Panel workspace for quick access while studying
+
+---
+
+# 🚀 Workflow
+
+```text
+VTOP Download
+      │
+      ▼
+Automatic File Detection
+      │
+      ▼
+Organize by Subject
+      │
+      ▼
+PDF / PPT Parsing
+      │
+      ▼
+Local Content Index
+      │
+      ├──────────────┐
+      ▼              ▼
+ Search         Ask AI (Lightweight RAG)
+      │              │
+      └──────┬───────┘
+             ▼
+      Notes & Quiz Generation
+```
+
+---
+
+# 🧠 AI Features
+
+## Ask AI
+
+Uses Lightweight Retrieval-Augmented Generation (RAG) to retrieve relevant sections from indexed lecture materials before sending the context to Gemini AI for accurate responses.
+
+---
+
+## Smart Search
+
+Searches lecture contents instead of relying only on filenames, making it easier to find concepts across PDFs and presentations.
+
+---
+
+## Revision Notes
+
+Generates concise AI-powered notes from individual lectures for quick revision.
+
+---
+
+## Quiz Generator
+
+Creates multiple-choice quizzes with explanations based on the selected lecture.
+
+---
+
+# 🛠 Tech Stack
+
+### Frontend
+
+- React
+- Vite
+- JavaScript
+- CSS
+
+### AI
+
+- Google Gemini API
+- Lightweight Retrieval-Augmented Generation (RAG)
+
+### Chrome Extension
+
+- Chrome Extension Manifest V3
+- Chrome Storage API
+- Chrome Downloads API
+- Chrome Side Panel API
+
+### Document Processing
+
+- PDF.js
+- Mammoth.js
+
+---
+
+# 📂 Project Structure
+
+```text
+src/
+│
+├── background/
+├── content/
+├── popup/
+├── sidepanel/
+│
+├── shared/
+│   ├── ai/
+│   ├── indexer/
+│   ├── parser/
+│   ├── search/
+│   └── storage/
+│
+└── manifest.json
+```
+
+---
+
+# ⚙ Installation
+
+Clone the repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/VITAssist.git
+```
+
+Install dependencies
 
 ```bash
 npm install
-npm run dev        # watch mode — rebuilds on every save
 ```
 
-Then in Chrome:
-1. Go to `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select the `dist/` folder
+Create a `.env`
+
+```env
+VITE_GEMINI_API_KEY=YOUR_API_KEY
+```
+
+Build the extension
+
+```bash
+npm run build
+```
+
+Load the generated `dist` folder as an unpacked extension from Chrome Extensions.
 
 ---
 
-## Project structure
+# 📸 Screenshots
 
-```
-VITAssist/
-├── public/
-│   └── manifest.json              # Chrome extension manifest v3
-├── popup.html                     # Popup entry point
-├── sidepanel.html                 # Side panel entry point
-├── vite.config.js                 # Build config — multiple entry points
-├── package.json
-└── src/
-    ├── background/
-    │   └── background.js          # Service worker — download hook, portal polling, message router
-    ├── content/
-    │   └── content.js             # Runs on VTOP portal — MutationObserver, inject button
-    ├── popup/
-    │   ├── popup.jsx              # Dashboard — subjects, stats, quick search
-    │   └── popup.css
-    ├── sidepanel/
-    │   ├── sidepanel.jsx          # Side panel shell — tabs, subject selector
-    │   ├── sidepanel.css
-    │   └── tabs/
-    │       ├── SearchTab.jsx      # RAG search — Fuse.js + LLM cascade
-    │       ├── ReviseTab.jsx      # Revision checklist — per subject
-    │       ├── NotesTab.jsx       # Slide-level sticky notes
-    │       └── SummaryTab.jsx     # LLM exam bullet generator with cache
-    └── shared/
-        ├── courseCodeMap.js       # VIT course codes → subject names + filename parser
-        ├── llm/
-        │   └── llmCascade.js      # 3-tier LLM — Gemini Nano → WebLLM → Transformers.js
-        ├── parser/
-        │   └── pptxParser.js      # JSZip PPTX/DOCX parser + PDF.js PDF parser
-        ├── search/
-        │   └── searchEngine.js    # Fuse.js retrieval + RAG pipeline
-        └── storage/
-            └── storage.js         # All chrome.storage.local operations
-```
+
+# 📸 Screenshots
+
+| Popup | Library |
+|-------|----------|
+| ![](screenshots/popup.png) | ![](screenshots/library.png) |
+
+| Search | Ask AI |
+|-------|----------|
+| ![](screenshots/search.png) | ![](screenshots/ask-ai.png) |
+
+| Notes | Quiz |
+|-------|----------|
+| ![](screenshots/notes.png) | ![](screenshots/quiz.png) |
+
+# 🚀 Future Improvements
+
+- Improve semantic search ranking
+- Better OCR support for scanned PDFs
+- Faster indexing for large libraries
+- Enhanced UI and user experience
 
 ---
 
-## What each file does
+# 👩‍💻 Author
 
-| File | Responsibility |
-|---|---|
-| `background.js` | Intercepts downloads, renames files, routes messages, polls VTOP |
-| `content.js` | MutationObserver on portal DOM, injects VITAssist button |
-| `courseCodeMap.js` | Maps `BCSE318L` → `Network Security`, parses VIT filename format |
-| `pptxParser.js` | Unzips PPTX, extracts slide titles and text using DOMParser |
-| `llmCascade.js` | Detects best LLM tier, generates answers and summaries |
-| `searchEngine.js` | Fuse.js fuzzy retrieval + LLM context injection (RAG pipeline) |
-| `storage.js` | Single source of truth for all chrome.storage.local reads/writes |
-| `popup.jsx` | Subject dashboard with exam countdown, progress bars, quick search |
-| `sidepanel.jsx` | Main workspace shell — 4 tabs, subject filter |
-| `SearchTab.jsx` | Query input → Fuse.js → LLM answer → file results with notes |
-| `ReviseTab.jsx` | Per-subject checklist — auto-populated from indexed slides |
-| `NotesTab.jsx` | Slide-keyed notes — add, edit, delete |
-| `SummaryTab.jsx` | Per-file summary generation → 5 exam bullets → cached |
+**Kalyani Manoj**
+
+B.Tech Computer Science and Engineering (Information Security)
+VIT Vellore
 
 ---
 
-## Before you ship — checklist
+<div align="center">
 
-- [ ] Add your full course code list to `src/shared/courseCodeMap.js`
-- [ ] Add your Gemini Flash API key to `src/shared/llm/llmCascade.js` (line with `YOUR_GEMINI_FLASH_API_KEY_HERE`)
-- [ ] Test PPTX parsing with 5 real VIT files — check slide extraction works
-- [ ] Test the download hook on the actual VTOP portal
-- [ ] Verify portal polling selector matches VTOP's actual DOM (inspect element on study material page)
-- [ ] Add icons to `public/icons/` (icon16.png, icon32.png, icon48.png, icon128.png)
-- [ ] Get 5+ students to beta test — collect before/after metrics
+### ⭐ If you found this project useful, consider giving it a star!
 
----
-
-## Storage schema
-
-All data in `chrome.storage.local` — never leaves the device.
-
-```
-vitassist_file_index    { [filename]: { subject, slides[], path, slideCount } }
-vitassist_checklist     { [subject]: { topics: [{id, label, done}] } }
-vitassist_notes         { [`${filename}::${slideNo}`]: { text, timestamp } }
-vitassist_summaries     { [filename]: { bullets[], generatedAt, llmTier } }
-vitassist_subjects      { [subject]: { examDate, color } }
-vitassist_settings      { llmTier, notificationsEnabled, lastPortalCheck }
-vitassist_portal_cache  { fileList[], lastChecked }
-```
-
----
-
-## LLM cascade — how it selects tiers
-
-```
-1. Check window.ai?.languageModel  →  Gemini Nano (Chrome 127+)
-2. Check navigator.gpu              →  WebLLM / Phi-3 mini (WebGPU)
-3. Fallback                         →  Transformers.js / TinyLlama (WASM)
-4. All fail                         →  Fuse.js results only (no LLM)
-```
-
-Tier is detected once per session and cached. Student never sees the switching.
-
----
-
-## Resume bullet (fill in metrics after launch)
-
-> Built VITAssist, a Chrome extension adopted by __ VIT students that auto-organises VTOP study materials and enables natural language search using a three-tier on-device LLM cascade (Gemini Nano → WebLLM/Phi-3 → WASM/TinyLlama) with zero backend, zero cost, and zero student setup — implementing browser-native RAG, multimodal document intelligence, and privacy-by-design architecture.
+</div>
