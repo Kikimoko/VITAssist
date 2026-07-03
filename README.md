@@ -214,3 +214,16 @@ VIT Vellore
 ### ⭐ If you found this project useful, consider giving it a star!
 
 </div>
+
+---
+
+# 📄 License
+
+Copyright © 2026 Kalyani Manoj.
+
+**All Rights Reserved.**
+
+This repository is published for portfolio and educational viewing purposes only.
+
+No part of this source code may be copied, modified, redistributed, or reused without prior written permission from the author.
+
