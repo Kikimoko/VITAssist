@@ -176,8 +176,6 @@ Load the generated `dist` folder as an unpacked extension from Chrome Extensions
 
 ---
 
-# 📸 Screenshots
-
 
 # 📸 Screenshots
 
