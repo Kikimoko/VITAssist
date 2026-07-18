@@ -15,7 +15,7 @@ Automatically organize VTOP study materials, search lecture content, ask AI ques
 <img src="https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white"/>
 <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
 <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
-<img src="https://img.shields.io/badge/Google-Gemini_AI-8E75FF?style=for-the-badge&logo=google&logoColor=white"/>
+<img src="https://img.shields.io/badge/Groq-Llama_3.3_70B-F55036?style=for-the-badge"/>
 
 </div>
 
@@ -25,7 +25,7 @@ Automatically organize VTOP study materials, search lecture content, ask AI ques
 
 VITAssist is an AI-powered Chrome Extension designed to simplify how VIT students organize, search, and study course materials downloaded from VTOP.
 
-The extension automatically detects downloaded PDFs and PowerPoint presentations, organizes them by subject, extracts and indexes their contents locally, and provides intelligent study tools including semantic search, contextual question answering using Retrieval-Augmented Generation (RAG), AI-powered quiz generation, and an integrated study library—all accessible through a modern Chrome Side Panel.
+The extension automatically detects downloaded PDFs and PowerPoint presentations, organizes them by subject, extracts and indexes their contents locally, and provides intelligent study tools including semantic search, contextual question answering using Retrieval-Augmented Generation (RAG) powered by Llama 3.3 70B through the Groq API, AI-powered quiz generation, and an integrated study library—all accessible through a modern Chrome Side Panel.
 
 ---
 
@@ -34,7 +34,7 @@ The extension automatically detects downloaded PDFs and PowerPoint presentations
 - 📂 Automatically detects and organizes downloaded VTOP study materials by subject
 - 📄 Supports both PDF and PowerPoint lecture materials
 - 🔍 Full-text semantic search across indexed lecture content
-- 🤖 AI-powered Question Answering using Lightweight Retrieval-Augmented Generation (RAG)
+- 🤖 AI-powered Question Answering using Llama 3.3 70B with Lightweight Retrieval-Augmented Generation (RAG)
 - 🧠 AI-powered quiz generation from selected courses and lecture files
 - 📚 Context-aware AI responses generated only from your indexed study materials
 - 📖 Integrated Library for browsing and managing indexed resources
@@ -75,8 +75,8 @@ The extension automatically detects downloaded PDFs and PowerPoint presentations
 
 ## Ask AI
 
-Uses a Lightweight Retrieval-Augmented Generation (RAG) pipeline to retrieve the most relevant sections from locally indexed lecture materials before sending the context to Gemini AI. This enables accurate, lecture-specific responses while minimizing hallucinations.
 
+Uses a Lightweight Retrieval-Augmented Generation (RAG) pipeline to retrieve the most relevant sections from locally indexed lecture materials before sending the context to Meta's Llama 3.3 70B model through the Groq API. This enables fast, accurate, lecture-specific responses while minimizing hallucinations.
 ---
 
 ## Semantic Search
@@ -89,7 +89,7 @@ Searches the actual contents of PDFs and PowerPoint presentations instead of rel
 
 Generate AI-powered multiple-choice quizzes from any indexed lecture.
 
-Simply choose a course, select a PDF or PowerPoint presentation, and VITAssist uses Gemini AI to generate topic-specific quiz questions based solely on the selected lecture. This enables focused self-assessment and exam preparation for individual topics.
+Simply choose a course, select a PDF or PowerPoint presentation, and VITAssist uses Meta's Llama 3.3 70B model through the Groq API to generate topic-specific multiple-choice questions based solely on the selected lecture. This enables focused self-assessment and exam preparation for individual topics.
 
 ---
 
@@ -110,7 +110,8 @@ Browse all indexed study materials organized by subject, quickly access download
 
 ### AI
 
-- Google Gemini API
+- Groq API
+- Meta Llama 3.3 70B
 - Lightweight Retrieval-Augmented Generation (RAG)
 
 ### Chrome Extension
@@ -177,7 +178,7 @@ npm install
 Create a `.env` file
 
 ```env
-VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+VITE_GROQ_API_KEY=YOUR_GROQ_API_KEY
 ```
 
 Build the extension
