@@ -1,6 +1,7 @@
 const DB_NAME = "VITAssistDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = "documents";
+const HANDLE_STORE = "handles";
 
 let db = null;
 
@@ -15,13 +16,17 @@ export async function getDB() {
 
       if (!database.objectStoreNames.contains(STORE)) {
         const store = database.createObjectStore(STORE, {
-          keyPath: "id",
+            keyPath: "id",
         });
-
+    
         store.createIndex("subject", "subject");
         store.createIndex("lectureTitle", "lectureTitle");
         store.createIndex("moduleNumber", "moduleNumber");
-      }
+    }
+    
+    if (!database.objectStoreNames.contains(HANDLE_STORE)) {
+        database.createObjectStore(HANDLE_STORE);
+    }
     };
 
     req.onsuccess = () => {
@@ -85,4 +90,49 @@ export async function deleteDocument(id) {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
   });
+}
+export async function saveFolderHandle(handle) {
+    const db = await getDB();
+
+    return new Promise((resolve, reject) => {
+
+        const tx = db.transaction(HANDLE_STORE, "readwrite");
+
+        tx.objectStore(HANDLE_STORE).put(handle, "library");
+
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+
+    });
+}
+
+export async function getFolderHandle() {
+    const db = await getDB();
+
+    return new Promise((resolve, reject) => {
+
+        const tx = db.transaction(HANDLE_STORE, "readonly");
+
+        const req = tx.objectStore(HANDLE_STORE).get("library");
+
+        req.onsuccess = () => resolve(req.result);
+
+        req.onerror = () => reject(req.error);
+
+    });
+}
+
+export async function clearFolderHandle() {
+    const db = await getDB();
+
+    return new Promise((resolve, reject) => {
+
+        const tx = db.transaction(HANDLE_STORE, "readwrite");
+
+        tx.objectStore(HANDLE_STORE).delete("library");
+
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+
+    });
 }

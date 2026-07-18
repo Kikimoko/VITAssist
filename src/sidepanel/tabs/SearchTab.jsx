@@ -3,9 +3,12 @@ import { useState, useEffect, useRef } from "react";
 import { searchLibrary } from "../../shared/search/searchEngine.js";
 import {
   chooseLibraryFolder,
-  indexLibrary
-}
-  from "../../shared/indexer/indexLibrary.js";
+  indexLibrary,
+  openIndexedFile,
+  getLibraryHandle
+} from "../../shared/indexer/indexLibrary.js";
+
+
 function highlight(text, query) {
   if (!text || !query) return text;
 
@@ -28,7 +31,10 @@ export default function SearchTab({ subject, initialQuery = "" }) {
   const [subjectFilter, setSubjectFilter] = useState(
     subject || "all"
   );
+  const [pendingFiles, setPendingFiles] = useState([]);
+const [checkingPending, setCheckingPending] = useState(true);
   const inputRef = useRef(null);
+
 
   // Auto-search if popup passed a query
   useEffect(() => {
@@ -37,6 +43,9 @@ export default function SearchTab({ subject, initialQuery = "" }) {
     }
     inputRef.current?.focus();
   }, [initialQuery]);
+  useEffect(() => {
+    loadPendingFiles();
+}, []);
 
   async function handleSearch(e, overrideQuery) {
     e?.preventDefault();
@@ -50,8 +59,13 @@ export default function SearchTab({ subject, initialQuery = "" }) {
     try {
 
 
-
+      const start = performance.now();
       const result = await searchLibrary(q);
+      const end = performance.now();
+
+      console.log(
+        `Search took ${(end - start).toFixed(2)} ms`
+      );
 
       setResults({
         results: result
@@ -63,15 +77,99 @@ export default function SearchTab({ subject, initialQuery = "" }) {
 
     }
   }
+  function cleanPendingFilename(name) {
 
-  function openFile(downloadId) {
-    chrome.runtime.sendMessage({
-      type: "OPEN_FILE",
-      payload: {
-        downloadId
-      }
+    return name
+        .replace(/^WINSEM\d{4}-\d{2}_VL_[A-Z0-9]+_\d+_TH_\d{4}-\d{2}-\d{2}_/i, "")
+        .replace(/^FALLSEM\d{4}-\d{2}_VL_[A-Z0-9]+_\d+_TH_\d{4}-\d{2}-\d{2}_/i, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+}
+  async function loadPendingFiles() {
+
+    try {
+
+        setCheckingPending(true);
+
+        const handle = await getLibraryHandle();
+
+        if (!handle) {
+            setPendingFiles([]);
+            return;
+        }
+
+        const index =
+    (await chrome.storage.local.get("vitassist_file_index"))
+        .vitassist_file_index || {};
+
+        const pending = [];
+
+        async function scan(dir, prefix = "") {
+
+            for await (const [name, entry] of dir.entries()) {
+
+                if (entry.kind === "directory") {
+
+                    await scan(entry, `${prefix}${name}/`);
+                    continue;
+
+                }
+
+                const ext =
+                    name.split(".").pop().toLowerCase();
+
+                if (!["pdf", "ppt", "pptx"].includes(ext))
+                    continue;
+
+                    const relativePath = `VITAssist/${prefix}${name}`;
+
+                    const exists = Object.values(index).some(file =>
+                        file.path === relativePath
+                    );
+                    
+                    if (!exists) {
+                    
+                      pending.push({
+                        name: cleanPendingFilename(name),
+                        path: relativePath
+                    });
+                    
+                    }
+
+            }
+
+        }
+
+        await scan(handle);
+
+        setPendingFiles(pending);
+
+    } catch (err) {
+
+        console.error(err);
+        setPendingFiles([]);
+
+    } finally {
+
+        setCheckingPending(false);
+
+    }
+
+}
+
+  async function openFile(file) {
+
+    console.log("Opening file:");
+console.log(JSON.stringify(file, null, 2));
+
+    await chrome.runtime.sendMessage({
+        type: "OPEN_FILE",
+        payload: file
     });
-  }
+
+}
   const filteredResults =
     results?.results?.filter(
       (r) =>
@@ -81,26 +179,55 @@ export default function SearchTab({ subject, initialQuery = "" }) {
   return (
     <div className="tab-pane">
 
-      <button
-        className="index-library-btn"
-        onClick={async () => {
+<button
+    className="index-library-btn"
+    onClick={async () => {
 
-          console.log("INDEX START");
+        const ok = await chooseLibraryFolder();
 
-          await chooseLibraryFolder();
+        if (!ok) return;
 
-          console.log("FOLDER CHOSEN");
+        
+        await indexLibrary();
 
-          await indexLibrary();
+await loadPendingFiles();
 
-          console.log("INDEX FINISHED");
+setResults(null);
 
-          alert("Library indexed successfully!");
+alert(
+    pendingFiles.length === 0
+        ? "Library is already up to date."
+        : "Library indexed successfully!"
+);
 
-        }}
-      >
-        Index Library
-      </button>
+    }}
+>
+    Index Library
+</button>
+{!checkingPending && (
+
+<div className="pending-files">
+
+    <div className="section-label">
+        {pendingFiles.length === 0
+            ? "✅ Library is up to date"
+            : `${pendingFiles.length} file${pendingFiles.length > 1 ? "s" : ""} pending indexing`}
+    </div>
+
+    {pendingFiles.map(file => (
+
+        <div
+            key={file.path}
+            className="pending-file"
+        >
+            📄 {file.name}
+        </div>
+
+    ))}
+
+</div>
+
+)}
 
       {/* Search input */}
       <form onSubmit={handleSearch} className="search-form">
@@ -202,7 +329,12 @@ export default function SearchTab({ subject, initialQuery = "" }) {
                       onClick={async () => {
 
                         console.log("Clicked Open");
-                        console.log(r);
+                        console.log("RESULT");
+console.log(r);
+
+console.log("downloadId =", r.downloadId);
+console.log("path =", r.path);
+console.log("filename =", r.filename);
 
                         await chrome.storage.local.set({
                           vitassist_active_file: r.filename
@@ -213,7 +345,7 @@ export default function SearchTab({ subject, initialQuery = "" }) {
                           console.log
                         );
 
-                        openFile(r.downloadId);
+                        openFile(r);
 
                       }}
                     >

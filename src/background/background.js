@@ -1,13 +1,17 @@
 // src/background/background.js
-
 import { buildCleanFilename } from "../shared/fileNameHelper.js";
 import {
   addFileToIndex,
+  updateFileMetadata,
   deleteSubject,
+  deleteFileFromIndex,
+  deleteNotesForFile,
+  deleteSummaryForFile,
   getPortalCache,
   savePortalCache,
   getSettings,
 } from "../shared/storage/storage.js";
+
 
 // ─── INSTALL / STARTUP ───────────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(async () => {
@@ -32,6 +36,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.downloads.onDeterminingFilename.addListener(
   (downloadItem, suggest) => {
     (async () => {
+      console.log("=================================");
+console.log("DOWNLOAD EVENT");
+console.log("Download ID:", downloadItem.id);
+console.log("Original filename:", downloadItem.filename);
+console.log("Download URL:", downloadItem.url);
       const originalFilename = downloadItem.filename;
 
       if (!isVITDownload(downloadItem)) {
@@ -43,6 +52,8 @@ chrome.downloads.onDeterminingFilename.addListener(
       // so it is always the course the student was looking at when they clicked
       const stored = await chrome.storage.local.get("vitassist_current_course");
       const course = stored.vitassist_current_course;
+      console.log("COURSE FROM STORAGE");
+console.log(course);
 
       if (!course?.name) {
         console.warn(
@@ -95,87 +106,101 @@ function extractModuleFromCleanName(cleanName) {
   const match = cleanName.match(/Module\s+(\d+)/i);
   return match ? `M${match[1]}` : null;
 }
+async function createFileRecord({
+  download,
+  course,
+  cleanName,
+  folderPath,
+  pending,
+}) {
 
+  return await addFileToIndex(cleanName, {
+
+    subject: course.name,
+
+    courseCode: course.courseCode || course.code || null,
+
+    lectureTitle: pending?.title ?? null,
+
+    moduleNumber:
+      pending?.moduleNumber ??
+      extractModuleFromCleanName(cleanName),
+
+    uploader: pending?.uploader ?? null,
+
+    uploadDate: pending?.uploadDate ?? null,
+
+    extension:
+      pending?.extension ??
+      cleanName.split(".").pop().toLowerCase(),
+
+    path: download.filename,
+
+    folderPath,
+
+    realFilename: cleanName,
+
+    filename: cleanName,
+
+    downloadId: download.id,
+
+    fullText: "",
+
+    pages: [],
+
+    slides: [],
+
+    pageCount: 0,
+
+    slideCount: 0,
+
+    parsed: false,
+
+    parsingStatus: "pending",
+
+    status: "active",
+
+    dateAdded: Date.now()
+
+  });
+
+}
 async function indexDownloadedFile(downloadId, course, cleanName, folderPath) {
+  
   try {
 
     const [download] = await chrome.downloads.search({ id: downloadId });
-    console.log("DOWNLOAD OBJECT");
-    console.log(JSON.stringify(download, null, 2));
-    if (!download) return;
 
-    const {
-      vitassist_pending_download: pending
-    } = await chrome.storage.local.get("vitassist_pending_download");
+console.log("DOWNLOAD OBJECT");
+console.log(JSON.stringify(download, null, 2));
 
-    // Parse the downloaded file
-    let parsed = {
-      lectureTitle: null,
-      moduleNumber: null,
-      fullText: "",
-      pages: [],
-      slides: [],
-      pageCount: 0,
-      slideCount: 0,
-    };
+if (!download) return;
 
-    try {
+const storage = await chrome.storage.local.get(null);
 
-      const response = await fetch(download.url);
-      const buffer = await response.arrayBuffer();
+console.log("FULL STORAGE");
+console.log(storage);
 
-      const extension = cleanName.split(".").pop().toLowerCase();
+const pending = storage.vitassist_pending_download || {};
+
+pending.extension =
+    download.filename.split(".").pop().toLowerCase();
+
+console.log("PENDING DOWNLOAD");
+console.log(pending);
 
 
-      console.log("[VITAssist] Parsed", cleanName);
+    
 
-    } catch (err) {
+    
 
-      console.warn("[VITAssist] Parser failed", err);
-
-    }
-
-    await addFileToIndex(cleanName, {
-
-      subject: course.name,
-
-      courseCode: course.code || course.courseCode,
-
-      lectureTitle:
-        pending?.title ||
-        parsed.lectureTitle,
-
-      moduleNumber:
-        pending?.moduleNumber ||
-        parsed.moduleNumber ||
-        extractModuleFromCleanName(cleanName),
-
-      uploader: pending?.uploader || null,
-
-      uploadDate: pending?.uploadDate || null,
-
-      path: download.filename,
-
-      folderPath,
-      
-      realFilename: download.filename,
-      downloadId: download.id,
-
-      fullText: parsed.fullText,
-
-      pages: parsed.pages,
-
-      slides: parsed.slides,
-
-      pageCount: parsed.pageCount,
-
-      slideCount: parsed.slideCount,
-
-      parsed: true,
-
-      parsingStatus: "completed",
-
-    });
+await createFileRecord({
+  download,
+  course,
+  cleanName,
+  folderPath,
+  pending,
+});
     
     await chrome.storage.local.remove("vitassist_pending_download");
 
@@ -188,7 +213,10 @@ async function indexDownloadedFile(downloadId, course, cleanName, folderPath) {
     }).catch(() => {});
 
     console.log("[VITAssist] Indexed:", cleanName);
-    
+    chrome.runtime.sendMessage({
+      type: "PARSE_PENDING_FILE",
+      filename: cleanName,
+  }).catch(() => {});
 
   } catch (err) {
 
@@ -250,6 +278,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleMessage(message, sender) {
+  console.log("MESSAGE RECEIVED:", message.type);
   switch (message.type) {
     case "GET_STATS": {
       const { getFileIndex, getAllSubjectsFromIndex } =
@@ -301,32 +330,86 @@ async function handleMessage(message, sender) {
 
     case "OPEN_FILE": {
 
-      try {
+      console.log("OPEN FILE MESSAGE");
+      console.log(message.payload);
   
-          await chrome.downloads.open(
-              message.payload.downloadId
-          );
+      const {
+          downloadId,
+          path,
+          filename,
+          folderPath
+      } = message.payload;
   
-          return {
-              success: true,
-          };
+      // Files downloaded through Chrome
+      if (typeof downloadId === "number") {
   
-      } catch (err) {
+          try {
   
-          console.error(err);
+              await chrome.downloads.open(downloadId);
   
-          return {
-              success: false,
-          };
+              return { success: true };
+  
+          } catch (err) {
+  
+              console.error(err);
+  
+          }
   
       }
   
+      console.warn("Indexed file detected");
+  
+      console.log({
+          filename,
+          path,
+          folderPath
+      });
+  
+      return {
+          success: false,
+          indexed: true
+      };
+  
   }
+  
+  case "DELETE_FILE": {
 
+    console.log(deleteFileFromIndex);
+    console.log("DELETE_FILE CALLED");
+  
+    const file = message.payload;
+  
+    if (typeof file.downloadId === "number") {
+  
+      try {
+        await chrome.downloads.removeFile(file.downloadId);
+      } catch (e) {
+        console.warn(e);
+      }
+  
+      try {
+        await chrome.downloads.erase({
+          id: file.downloadId,
+        });
+      } catch {}
+  
+    }
+  
+    await deleteFileFromIndex(file.path);
+    await deleteNotesForFile(file.path);
+    await deleteSummaryForFile(file.path);
+  
+    console.log("DELETE COMPLETE");
+  
+    return { success: true };
+  }
     default:
       return { error: `Unknown message type: ${message.type}` };
+      
   }
+  
 }
+
 
 chrome.notifications.onButtonClicked.addListener((notifId, btnIndex) => {
   if (btnIndex === 0) chrome.tabs.create({ url: "https://vtopcc.vit.ac.in" });

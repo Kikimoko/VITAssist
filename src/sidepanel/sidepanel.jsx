@@ -21,10 +21,19 @@ function SidePanelApp() {
   const [activeTab, setActiveTab] = useState("Library");
   const [pendingSearch, setPendingSearch] = useState("");
   const [activeSubject, setActiveSubject] = useState(null);
+  
   useEffect(() => {
-    indexLibrary();
-  }, []);
-  useEffect(() => {
+
+    (async () => {
+      try {
+        // Automatically index any newly downloaded files
+        await indexLibrary();
+      } catch (err) {
+        // First run / no folder selected yet
+        console.log("[VITAssist] Auto index skipped:", err.message);
+      }
+    })();
+  
     chrome.storage.local.get(
       [
         "vitassist_pending_search",
@@ -32,32 +41,33 @@ function SidePanelApp() {
         "vitassist_active_tab",
       ],
       (result) => {
-
+  
         if (result.vitassist_pending_search) {
           setPendingSearch(result.vitassist_pending_search);
           setActiveTab("Search");
-
+  
           chrome.storage.local.remove(
             "vitassist_pending_search"
           );
         }
-
+  
         if (result.vitassist_active_tab) {
           setActiveTab("Library");
         }
-
+  
         if (result.vitassist_active_subject) {
           setActiveSubject(
             result.vitassist_active_subject
           );
-
+  
           chrome.storage.local.remove(
             "vitassist_active_subject"
           );
         }
-
+  
       }
     );
+  
   }, []);
 
 

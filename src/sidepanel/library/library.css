@@ -2,17 +2,22 @@
     display:flex;
     flex-direction:column;
     height:100%;
+    width:100%;
+    min-width:0;
     overflow:hidden;
     background:#111114;
+    box-sizing:border-box;
 }
 
 .library-title{
     font-size:24px;
     font-weight:700;
     padding:20px;
+    width:100%;
+    box-sizing:border-box;
 }
-
 .library-search{
+    width:calc(100% - 40px);
     margin:0 20px 18px;
     padding:12px 14px;
     border-radius:10px;
@@ -20,6 +25,7 @@
     background:#1b1c27;
     color:white;
     outline:none;
+    box-sizing:border-box;
 }
 
 .library-search:focus{
@@ -29,16 +35,21 @@
 .library-scroll{
     flex:1;
     overflow-y:auto;
-    padding-bottom:30px;
+    overflow-x:hidden;
+    width:100%;
+    padding:0 20px 30px;
+    box-sizing:border-box;
 }
 
 .folder{
+    width:100%;
     margin-bottom:18px;
     border:1px solid rgba(255,255,255,.06);
     border-radius:18px;
     overflow:hidden;
     background:#14141c;
     transition:.25s;
+    box-sizing:border-box;
 }
 
 .folder:hover{
@@ -131,9 +142,11 @@
 .files{
     margin:0 12px 12px;
     padding:8px;
+    width:calc(100% - 24px);
     border-radius:12px;
     background:#0f1018;
     border:1px solid rgba(255,255,255,.05);
+    box-sizing:border-box;
 }
 .file-row{
     display:flex;
@@ -241,4 +254,31 @@
 
     }
 
+}
+.file-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+}
+
+.delete-file{
+    border:none;
+    background:transparent;
+    color:#8b8b98;
+    font-size:18px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:.2s;
+}
+
+.delete-file:hover{
+    color:#ff6666;
+    transform:scale(1.08);
+}
+
+.delete-file:active{
+    transform:scale(.95);
 }

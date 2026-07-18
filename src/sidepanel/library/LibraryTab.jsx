@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import "./library.css";
+import {
+  indexLibrary
+} from "../../shared/indexer/indexLibrary.js";
+import {
+  chooseLibraryFolder
+} from "../../shared/indexer/indexLibrary.js";
+import {
+  openIndexedFile
+} from "../../shared/indexer/indexLibrary.js";
 
 export default function LibraryTab({ activeSubject }) {
   const [fileIndex, setFileIndex] = useState({});
@@ -7,6 +16,7 @@ export default function LibraryTab({ activeSubject }) {
   const [highlighted, setHighlighted] = useState(null);
   const [query, setQuery] = useState("");
   const folderRefs = useRef({});
+  const [libraryReady, setLibraryReady] = useState(false);
 
   useEffect(() => {
     loadLibrary();
@@ -33,9 +43,13 @@ export default function LibraryTab({ activeSubject }) {
 
   async function loadLibrary() {
     const { getFileIndex } = await import("../../shared/storage/storage.js");
-    const index = (await getFileIndex()) || {};
-    setFileIndex(index);
-  }
+
+    const index = await getFileIndex();
+
+    setFileIndex(index || {});
+
+    setLibraryReady(Object.keys(index).length > 0);
+}
 
   const grouped = useMemo(() => {
     const map = {};
@@ -68,14 +82,50 @@ export default function LibraryTab({ activeSubject }) {
 
   }, [fileIndex, query]);
 
-  async function openFile(downloadId) {
-    await chrome.runtime.sendMessage({
-      type: "OPEN_FILE",
-      payload: {
-        downloadId,
-      },
-    });
+  async function openFile(file) {
+
+    console.log("Opening file:");
+console.log(JSON.stringify(file, null, 2));
+
+    if (file.downloadId != null) {
+
+        await chrome.runtime.sendMessage({
+            type: "OPEN_FILE",
+            payload: file
+        });
+
+        return;
+    }
+
+    await openIndexedFile(file);
+
+}
+async function deleteFile(file) {
+
+  const ok = confirm(
+      `Delete "${file.filename}"?`
+  );
+
+  if (!ok) return;
+
+  const res = await chrome.runtime.sendMessage({
+      type: "DELETE_FILE",
+      payload: file
+  });
+
+  if (res?.success) {
+
+      await loadLibrary();
+
+      if (
+          expanded &&
+          !Object.values(await (await import("../../shared/storage/storage.js")).getFileIndex())
+              .some(f => f.subject === expanded)
+      ) {
+          setExpanded(null);
+      }
   }
+}
   async function deleteSubject(subject) {
     const ok = confirm(
       `Delete "${subject}"?\n\nThis will permanently remove all downloaded files for this subject.`
@@ -95,7 +145,45 @@ export default function LibraryTab({ activeSubject }) {
 
     await loadLibrary();
   }
+  if (!libraryReady) {
+    return (
+        <div className="library-root">
 
+            <div className="library-title">
+                📚 My Library
+            </div>
+
+            <div className="empty-state">
+
+                <h3>No library connected</h3>
+
+                <p>
+                    Connect your VITAssist folder to access
+                    downloaded study materials.
+                </p>
+
+                <button
+                    className="index-library-btn"
+                    onClick={async () => {
+
+                        const ok = await chooseLibraryFolder();
+
+                        if (!ok) return;
+
+                        await indexLibrary();
+
+                        await loadLibrary();
+
+                    }}
+                >
+                    📁 Connect Folder
+                </button>
+
+            </div>
+
+        </div>
+    );
+}
   return (
     <div className="library-root">
 
@@ -191,24 +279,26 @@ export default function LibraryTab({ activeSubject }) {
 
                     </div>
 
-                    <button
-                      className="open-file"
-                      title="Open"
-                      onClick={() => openFile(file.downloadId)}
-                    >
-                      ↗
-                    </button>
-                    <button
-                      onClick={async () => {
+                    <div className="file-actions">
 
-                        const handle = await chooseLibraryFolder();
+                      <button
+                        className="open-file"
+                        title="Open"
+                        onClick={() => openFile(file)}
+                      >
+                        ↗
+                      </button>
 
-                        console.log(handle);
+                      <button
+                        className="delete-file"
+                        title="Delete"
+                        onClick={() => deleteFile(file)}
+                      >
+                        🗑️
+                      </button>
 
-                      }}
-                    >
-
-                    </button>
+                    </div>
+                    
 
                   </div>
                 ))}

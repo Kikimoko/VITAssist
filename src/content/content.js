@@ -50,123 +50,137 @@
     });
   }
   function extractMaterialMetadata(target) {
+
     const row = target.closest("tr");
 
-    if (!row) return null;
+    if (!row)
+      return null;
 
-    const cells = row.querySelectorAll("td");
+    const materialCell =
+      row.querySelectorAll("td")[2];
 
-    if (cells.length < 5) return null;
+    const uploaderCell =
+      row.querySelectorAll("td")[3];
 
-    // Material Detail column
-    const materialCell = cells[2];
+    if (!materialCell)
+      return null;
 
-    const lines = materialCell.innerText
-      .split("\n")
-      .map(x => x.trim())
-      .filter(Boolean);
+    const title =
+      materialCell.querySelector("span")?.textContent.trim() || "";
 
-      const title =
-      lines[0]?.trim() || "";
+    const spans =
+      materialCell.querySelectorAll("span");
 
-    let moduleNumber = "";
+    const moduleNumber =
+      spans[1]
+        ? `Module ${spans[1].textContent.trim()}`
+        : null;
 
-    const moduleMatch = materialCell.innerText.match(/\b(\d+)\s*\((Document|Presentation|PDF|PPT)/i);
-
-    if (moduleMatch) {
-      moduleNumber = `Module ${moduleMatch[1]}`;
-    }
+    const type =
+      spans[2]?.textContent
+        .trim()
+        .toLowerCase();
 
     let fileType = "";
 
-    if (/presentation/i.test(materialCell.innerText))
+    if (type.includes("presentation"))
       fileType = "pptx";
-    else if (/document/i.test(materialCell.innerText))
+
+    else if (type.includes("document"))
       fileType = "pdf";
 
-    // Uploaded By column
-    const uploaderCell = cells[3];
-
-    const uploadLines = uploaderCell.innerText
-      .split("\n")
-      .map(x => x.trim())
-      .filter(Boolean);
-
-    const uploader = uploadLines[0] || "";
-    const uploadDate =
-    uploadLines.at(-1)?.trim() || "";
-    console.log("Material Cell:");
-    console.log(materialCell.innerHTML);
-
-    console.log("Material Text:");
-    console.log(materialCell.innerText);
-
+    const uploaderLines =
+      uploaderCell
+        ?.innerText
+        .split("\n")
+        .map(x => x.trim())
+        .filter(Boolean) || [];
 
     return {
+
       title,
+
       moduleNumber,
-      uploader,
-      uploadDate,
+
+      uploader:
+        uploaderLines[0] || "",
+
+      uploadDate:
+        uploaderLines.at(-1) || "",
+
       fileType
+
     };
+
   }
   // ─── STAMP CURRENT COURSE ON EVERY DOWNLOAD CLICK ─────────────────────────
   // Intercept clicks on download links and write vitassist_current_course
   // BEFORE the download fires — no race condition possible.
   function attachDownloadClickListeners() {
 
-    document.addEventListener("click", (e) => {
-  
-      const target = e.target.closest(
-        "a[href*='download'], a[href*='.ppt'], a[href*='.pptx'], a[href*='.pdf'], a[href*='.docx'], button, input[type='button']"
-      );
-  
+    document.addEventListener("click", async (e) => {
+
+      const target =
+        e.target.closest(".download-btn");
+
       if (!target)
         return;
-  
-      const course = getCurrentCourseFromDropdown();
-  
-      if (!course)
+
+
+      let course = getCurrentCourseFromDropdown();
+
+      if (!course) {
+
+        const stored = await chrome.storage.local.get(
+          "vitassist_current_course"
+        );
+
+        course = stored.vitassist_current_course;
+
+      }
+
+      if (!course) {
+        console.warn("[VITAssist] No current course.");
         return;
-  
+      }
+
       const material =
         extractMaterialMetadata(target);
-  
+
       console.log("==========");
       console.log("DOWNLOAD CLICK");
       console.log("Course:", course);
       console.log("Material:", material);
       console.log("Target:", target);
       console.log("==========");
-  
+
       const pending = {
-  
+
         url:
           target.href ||
           target.getAttribute("href") ||
           null,
-  
-        extension:
-          material?.fileType || "",
-  
+
+          extension: e?.fileType || "",
+
         title:
           material?.title || null,
-  
+
         moduleNumber:
           material?.moduleNumber || null,
-  
+
         uploader:
           material?.uploader || null,
-  
+
         uploadDate:
           material?.uploadDate || null
-  
+
       };
-  
+
       console.log(
         "[VITAssist] Pending Download"
       );
-  
+
       console.log(
         JSON.stringify(
           pending,
@@ -174,23 +188,25 @@
           2
         )
       );
-  
-      console.log("chrome =", chrome);
-console.log("chrome.storage =", chrome.storage);
-console.log("chrome.storage.local =", chrome.storage?.local);
 
-if (!chrome.storage?.local) {
-    console.error("Storage API unavailable");
-    return;
-}
+      await chrome.storage.local.set({
 
-chrome.storage.local.set({
-    vitassist_current_course: course,
-    vitassist_pending_download: pending
-});
-  
-    }, true);
-  
+        vitassist_current_course: course,
+    
+        vitassist_pending_download: pending
+    
+    });
+    
+    console.log("[VITAssist] Saved pending download");
+    
+    const verify = await chrome.storage.local.get([
+        "vitassist_current_course",
+        "vitassist_pending_download"
+    ]);
+    
+    console.log("VERIFY STORAGE");
+    console.log(verify);
+    });
   }
   // ─── WATCH DROPDOWN CHANGES ────────────────────────────────────────────────
   function watchDropdown(select) {
@@ -283,20 +299,48 @@ chrome.storage.local.set({
 
   // ─── WAIT FOR DROPDOWN ────────────────────────────────────────────────────
   function waitForDropdown() {
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
+
+    let attached = false;
+
+    const tryAttach = () => {
+
       const select = document.querySelector("#courseId");
-      if (select && select.options.length > 1) {
-        clearInterval(interval);
-        console.log("[VITAssist] Dropdown ready after", attempts, "attempt(s)");
-        watchDropdown(select);
+
+      if (!select)
+        return false;
+
+      if (select.options.length <= 1)
+        return false;
+
+      if (attached)
+        return true;
+
+      attached = true;
+
+      console.log("[VITAssist] Dropdown ready");
+
+      watchDropdown(select);
+
+      return true;
+
+    };
+
+    if (tryAttach())
+      return;
+
+    const observer = new MutationObserver(() => {
+
+      if (tryAttach()) {
+        observer.disconnect();
       }
-      if (attempts >= 20) {
-        clearInterval(interval);
-        console.warn("[VITAssist] Timed out waiting for dropdown.");
-      }
-    }, 1000);
+
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
   }
 
   // ─── INIT ──────────────────────────────────────────────────────────────────

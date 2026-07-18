@@ -1,38 +1,42 @@
-import { parsePDF } from "./pdfParser";
-import { parsePPTX } from "./pptxParser";
+import { parsePDF } from "./pdfParser.js";
+import { parsePPTX } from "./pptxParser.js";
+
+const EMPTY_RESULT = {
+    lectureTitle: null,
+    moduleNumber: null,
+    pageCount: 0,
+    slideCount: 0,
+    pages: [],
+    slides: [],
+    fullText: ""
+};
 
 export async function parseFile(arrayBuffer, extension) {
 
     extension = extension.toLowerCase();
 
-    switch (extension) {
+    try {
 
-        case "pdf":
-            return await parsePDF(arrayBuffer);
+        switch (extension) {
 
-        case "ppt":
-            
+            case "pdf":
+                return await parsePDF(arrayBuffer);
 
-        case "pptx":
-            return await parsePPTX(arrayBuffer);
+            case "ppt":
+            case "pptx":
+                return await parsePPTX(arrayBuffer);
 
-        default:
-            return {
+            default:
+                console.warn("[VITAssist] Unsupported file type:", extension);
+                return EMPTY_RESULT;
+        }
 
-                lectureTitle: null,
+    } catch (err) {
 
-                moduleNumber: null,
+        console.error("[VITAssist] Parser failed:", err);
 
-                pageCount: 0,
+        return EMPTY_RESULT;
 
-                slideCount: 0,
-
-                pages: [],
-
-                slides: [],
-
-                fullText: ""
-
-            };
     }
+
 }

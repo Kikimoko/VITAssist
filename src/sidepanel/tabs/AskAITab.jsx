@@ -67,7 +67,7 @@ export default function AskAITab() {
     
                 copy[copy.length - 1] = {
                     role: "assistant",
-                    text: "Error contacting Gemini."
+                    text: "Error contacting groq."
                 };
     
                 return copy;

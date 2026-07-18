@@ -75,7 +75,10 @@ function cleanupTitle(title) {
 
         // remove page numbers
         .replace(/^Page\s+\d+$/i, "")
-
+        .replace(/^VIT$/i, "")
+.replace(/^Vellore Institute.*$/i, "")
+.replace(/^Cryptography and Network Security$/i, "Cryptography and Network Security")
+.replace(/^Cloud Architecture Design$/i, "Cloud Architecture Design")
         .trim();
 }
 
@@ -89,51 +92,67 @@ function extractModule(text) {
     return `Module ${match[1]}`;
 }
 
-function guessLectureTitle(lines) {
+function scoreTitle(line) {
 
-    const cleaned = lines
-        .map(normalize)
-        .filter(Boolean)
-        .filter(line => line.length >= 4)
-        .filter(line => !/^https?:\/\//i.test(line))
-        .filter(line => !/^\d+$/.test(line))
-        .filter(line => !/^[A-Z]$/.test(line))
-        .filter(line => !/^slide\s*\d+$/i.test(line))
-        .filter(line => !/^page\s*\d+$/i.test(line))
-        .filter(line => !/^•+$/.test(line));
+    let score = 0;
 
-    if (!cleaned.length)
-        return "";
+    line = normalize(line);
 
-    // Try first 6 lines together because PPT titles are often split
-    let merged = "";
+    if (line.length < 5) return -100;
+    if (line.length > 90) return -100;
 
-    for (let i = 0; i < Math.min(6, cleaned.length); i++) {
+    // Bad candidates
+    if (/^page\s+\d+$/i.test(line)) score -= 100;
+    if (/^slide\s+\d+$/i.test(line)) score -= 100;
+    if (/^https?:\/\//i.test(line)) score -= 100;
+    if (/^\d+$/.test(line)) score -= 100;
 
-        const line = cleaned[i];
+    if (/copyright/i.test(line)) score -= 40;
+    if (/department/i.test(line)) score -= 30;
+    if (/school/i.test(line)) score -= 30;
+    if (/faculty/i.test(line)) score -= 30;
+    if (/prof/i.test(line)) score -= 30;
+    if (/dr\./i.test(line)) score -= 30;
+    if (/vellore institute/i.test(line)) score -= 50;
+    if (/vit/i.test(line)) score -= 20;
 
-        if (line.length < 3)
-            continue;
+    // Good candidates
+    if (line.split(" ").length <= 8)
+        score += 25;
 
-        if (merged.length)
-            merged += " ";
-
-        merged += line;
-
-        if (merged.length > 20)
-            break;
-    }
+    if (/^[A-Z0-9 ()\-&/,]+$/.test(line))
+        score += 20;
 
     if (
-        merged.length >= 8 &&
-        merged.length <= 100
-    ) {
-        return merged;
-    }
+        /^[A-Z]/.test(line) &&
+        !line.endsWith(".")
+    )
+        score += 10;
 
-    return cleaned[0];
+    return score;
 }
 
+function guessLectureTitle(lines) {
+
+    let best = "";
+    let bestScore = -999;
+
+    for (const line of lines) {
+
+        const s = scoreTitle(line);
+
+        if (s > bestScore) {
+
+            bestScore = s;
+            best = line;
+
+        }
+
+    }
+
+    return cleanupTitle(best);
+
+}
 export async function parsePDF(arrayBuffer) {
 
     const pdf = await pdfjsLib.getDocument({
@@ -195,7 +214,7 @@ if (pageText.length < 20) {
             .filter(Boolean);
 
         const pageTitle =
-            guessLectureTitle(lines.slice(0, 20)) ||
+            guessLectureTitle(lines) ||
             `Page ${i}`;
 
         pages.push({
@@ -208,7 +227,8 @@ if (pageText.length < 20) {
         console.log(pageTitle);
         console.log(pageText.substring(0, 300));
 
-        fullText += pageText + "\n";
+        if (pageText.trim())
+    fullText += pageText + "\n";
 
     }
 
@@ -220,9 +240,8 @@ if (pageText.length < 20) {
 
     return {
         lectureTitle:
-            pages.length
-                ? pages[0].title
-                : "",
+    pages.find(p => p.title && !/^Page\s+\d+$/i.test(p.title))
+        ?.title || "",
 
         moduleNumber:
             extractModule(fullText),

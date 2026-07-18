@@ -4,7 +4,8 @@
 
 // ─── KEYS ───────────────────────────────────────────────────────────────────
 export const KEYS = {
-  FILE_INDEX:   "vitassist_file_index",    // { [filename]: { subject, module, slides: [{no, title, text}], path, dateAdded } }
+  FILE_INDEX:   "vitassist_file_index",  
+  LAST_INDEX: "vitassist_last_index", // { [filename]: { subject, module, slides: [{no, title, text}], path, dateAdded } }
   CHECKLIST:    "vitassist_checklist",     // { [subject]: { topics: [{id, label, done}] } }
   NOTES:        "vitassist_notes",         // { [`${filename}::${slideNo}`]: { text, timestamp } }
   SUMMARIES:    "vitassist_summaries",     // { [filename]: { bullets: string[], generatedAt: timestamp, llmTier: string } }
@@ -20,32 +21,133 @@ export async function getFileIndex() {
 }
 
 export async function addFileToIndex(filename, metadata) {
+
   const index = await getFileIndex();
 
-  index[filename] = {
-    ...metadata,
+  const existingEntry = Object.entries(index).find(([key, file]) =>
+      key === filename ||
+      file.filename === metadata.filename ||
+      file.realFilename === metadata.realFilename ||
+      file.path === metadata.path
+  );
 
-    // Parsing metadata
-    lectureTitle: metadata.lectureTitle ?? null,
-    moduleNumber: metadata.moduleNumber ?? null,
+  if (existingEntry) {
 
-    fullText: metadata.fullText ?? "",
+      const [key, old] = existingEntry;
 
-    pages: metadata.pages ?? [],
-    slides: metadata.slides ?? [],
+      index[key] = {
 
-    pageCount: metadata.pageCount ?? 0,
-    slideCount: metadata.slideCount ?? 0,
+          ...old,
+          ...metadata,
 
-    parsed: metadata.parsed ?? false,
-    parsingStatus: metadata.parsingStatus ?? "pending",
+          filename:
+              metadata.filename ?? old.filename,
 
-    dateAdded: Date.now(),
-  };
+          realFilename:
+              metadata.realFilename ?? old.realFilename,
+
+          path:
+              metadata.path ?? old.path,
+
+          folderPath:
+              metadata.folderPath ?? old.folderPath,
+
+          extension:
+              metadata.extension ?? old.extension,
+
+          downloadId:
+              metadata.downloadId ?? old.downloadId,
+
+          lectureTitle:
+              metadata.lectureTitle ?? old.lectureTitle,
+
+          moduleNumber:
+              metadata.moduleNumber ?? old.moduleNumber,
+
+          uploader:
+              metadata.uploader ?? old.uploader,
+
+          uploadDate:
+              metadata.uploadDate ?? old.uploadDate,
+
+          fullText:
+              metadata.fullText ?? old.fullText ?? "",
+
+          pages:
+              metadata.pages ?? old.pages ?? [],
+
+          slides:
+              metadata.slides ?? old.slides ?? [],
+
+          pageCount:
+              metadata.pageCount ?? old.pageCount ?? 0,
+
+          slideCount:
+              metadata.slideCount ?? old.slideCount ?? 0,
+
+          parsed:
+              metadata.parsed ?? old.parsed ?? false,
+
+          parsingStatus:
+              metadata.parsingStatus ?? old.parsingStatus ?? "pending",
+
+          status:
+              metadata.status ?? old.status ?? "active",
+
+          dateAdded:
+              old.dateAdded ?? metadata.dateAdded ?? Date.now()
+
+      };
+
+  } else {
+
+      index[filename] = {
+
+          filename,
+          ...metadata,
+
+          lectureTitle: metadata.lectureTitle ?? null,
+          moduleNumber: metadata.moduleNumber ?? null,
+          uploader: metadata.uploader ?? null,
+          uploadDate: metadata.uploadDate ?? null,
+
+          fullText: metadata.fullText ?? "",
+          pages: metadata.pages ?? [],
+          slides: metadata.slides ?? [],
+
+          pageCount: metadata.pageCount ?? 0,
+          slideCount: metadata.slideCount ?? 0,
+
+          parsed: metadata.parsed ?? false,
+          parsingStatus: metadata.parsingStatus ?? "pending",
+
+          status: metadata.status ?? "active",
+
+          dateAdded: metadata.dateAdded ?? Date.now()
+
+      };
+
+  }
 
   await chrome.storage.local.set({
-    [KEYS.FILE_INDEX]: index,
+      [KEYS.FILE_INDEX]: index
   });
+
+}
+export async function getFileMetadata(filename) {
+
+  const index = await getFileIndex();
+
+  if (index[filename]) {
+      return index[filename];
+  }
+
+  return Object.values(index).find(file =>
+      file.filename === filename ||
+      file.realFilename === filename ||
+      file.path?.endsWith("/" + filename)
+  ) || null;
+
 }
 export async function updateFileMetadata(filename, updates) {
 
@@ -54,39 +156,28 @@ export async function updateFileMetadata(filename, updates) {
   if (!index[filename]) return;
 
   index[filename] = {
-    ...index[filename],
-    ...updates,
+      ...index[filename],
+      ...updates
   };
 
   await chrome.storage.local.set({
-    [KEYS.FILE_INDEX]: index,
+      [KEYS.FILE_INDEX]: index
   });
 
-}
-export async function getFileMetadata(filename) {
-
-  const index = await getFileIndex();
-
-  return index[filename] || null;
-
-}
-export async function getFilesForSubject(subject) {
-  const index = await getFileIndex();
-  return Object.entries(index)
-    .filter(([_, meta]) => meta.subject === subject)
-    .map(([filename, meta]) => ({ filename, ...meta }));
 }
 export async function getPendingFiles() {
 
   const index = await getFileIndex();
 
-  return Object.entries(index).map(([filename, file]) => ({
-
-      filename,
-
-      ...file
-
-  }));
+  return Object.entries(index)
+      .filter(([_, file]) =>
+          file.status !== "deleted" &&
+          !file.parsed
+      )
+      .map(([filename, file]) => ({
+          filename,
+          ...file
+      }));
 
 }
 export async function markParsing(filename) {
@@ -106,6 +197,22 @@ export async function getAllSubjectsFromIndex() {
   const index = await getFileIndex();
   const subjects = [...new Set(Object.values(index).map(m => m.subject))];
   return subjects;
+}
+export async function getFilesForSubject(subject) {
+
+  const index = await getFileIndex();
+
+  return Object.entries(index)
+      .filter(([_, file]) =>
+          file.subject === subject &&
+          file.status !== "deleted"
+      )
+      .map(([filename, file]) => ({
+          filename,
+          ...file
+      }))
+      .sort((a, b) => a.filename.localeCompare(b.filename));
+
 }
 
 // ─── CHECKLIST ───────────────────────────────────────────────────────────────
@@ -319,4 +426,54 @@ export async function deleteSubject(subject) {
   });
 
   return deletedFiles;
+}
+export async function deleteFileFromIndex(path) {
+
+  const index = await getFileIndex();
+
+  for (const [key, file] of Object.entries(index)) {
+    if (file.path === path) {
+      delete index[key];
+      break;
+    }
+  }
+
+  await chrome.storage.local.set({
+    [KEYS.FILE_INDEX]: index,
+  });
+
+}
+
+export async function deleteNotesForFile(path) {
+
+  const filename = path.split("/").pop();
+
+  const res = await chrome.storage.local.get(KEYS.NOTES);
+  const notes = res[KEYS.NOTES] || {};
+
+  Object.keys(notes).forEach(key => {
+    if (key.startsWith(filename + "::")) {
+      delete notes[key];
+    }
+  });
+
+  await chrome.storage.local.set({
+    [KEYS.NOTES]: notes,
+  });
+
+}
+
+export async function deleteSummaryForFile(path) {
+
+  const filename = path.split("/").pop();
+
+  const res = await chrome.storage.local.get(KEYS.SUMMARIES);
+  const summaries = res[KEYS.SUMMARIES] || {};
+
+  delete summaries[filename];
+
+  await chrome.storage.local.set({
+    [KEYS.SUMMARIES]: summaries,
+  });
+
 }

@@ -34,19 +34,102 @@ body {
 }
 
 /* ── TOPBAR ── */
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  background: linear-gradient(
-135deg,
-#25184f 0%,
-#384a87 60%,
-#3b7b7b 100%
-);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+/* ── TOPBAR ───────────────────────────────────────────── */
+
+.topbar{
+
+  position:relative;
+  overflow:hidden;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  padding:14px 18px;
+
+  background:
+      linear-gradient(
+          135deg,
+          #5644d8 0%,
+          #6972e7 35%,
+          #5c88e5 70%,
+          #58b6c8 100%
+      );
+
+  border-bottom:1px solid rgba(255,255,255,.10);
+
+  box-shadow:
+      inset 0 -1px 0 rgba(255,255,255,.15),
+      0 10px 25px rgba(0,0,0,.28);
+
+  isolation:isolate;
+}
+/* Circuit pattern */
+
+.topbar::before{
+
+  content:"";
+
+  position:absolute;
+  inset:0;
+
+  opacity:.35;
+
+  pointer-events:none;
+
+  background:
+
+      radial-gradient(circle at 12% 30%, rgba(255,255,255,.45) 2px, transparent 3px),
+
+      radial-gradient(circle at 82% 65%, rgba(255,255,255,.35) 2px, transparent 3px),
+
+      radial-gradient(circle at 52% 18%, rgba(255,255,255,.25) 2px, transparent 3px),
+
+      linear-gradient(90deg,
+          transparent 24px,
+          rgba(255,255,255,.10) 25px,
+          rgba(255,255,255,.10) 27px,
+          transparent 28px),
+
+      linear-gradient(
+          transparent 24px,
+          rgba(255,255,255,.10) 25px,
+          rgba(255,255,255,.10) 27px,
+          transparent 28px);
+
+  background-size:
+      auto,
+      auto,
+      auto,
+      120px 120px,
+      120px 120px;
+}
+.topbar::after{
+
+  content:"";
+
+  position:absolute;
+  inset:0;
+
+  pointer-events:none;
+
+  background:
+
+      linear-gradient(
+          110deg,
+          transparent 15%,
+          rgba(255,255,255,.18) 35%,
+          transparent 55%
+      );
+
+  mix-blend-mode:screen;
+}
+.topbar > *{
+
+  position:relative;
+
+  z-index:2;
+
 }
 .logo { font-size: 15px; font-weight: 700; color: #fff; }
 .subject-select {
@@ -768,13 +851,19 @@ body {
 }
 .ai-root{
 
+  position:relative;
+
   display:flex;
-  
+
   flex-direction:column;
-  
+
   height:100%;
-  
-  }
+
+  overflow:hidden;
+
+  background:#0b0c12;
+
+}
   
   .ai-header{
   
@@ -839,18 +928,20 @@ body {
   }
   
   .chat-area{
+
+    flex:1;
   
-  flex:1;
+    overflow:auto;
   
-  overflow:auto;
+    padding:20px;
   
-  padding:20px;
+    display:flex;
   
-  display:flex;
+    flex-direction:column;
   
-  flex-direction:column;
+    gap:14px;
   
-  gap:14px;
+    background:transparent;
   
   }
   
@@ -1278,5 +1369,69 @@ line-height:1.6;
   border-color:#7b6cff;
 
   box-shadow:0 0 0 3px rgba(123,108,255,.2);
+
+}
+/* ---------- Arcade Background ---------- */
+
+.ai-root::before{
+
+  content:"";
+
+  position:absolute;
+
+  inset:0;
+
+  pointer-events:none;
+
+  opacity:.25;
+
+  background:
+
+  linear-gradient(#4650ff 3px, transparent 3px),
+
+  linear-gradient(90deg,#4650ff 3px, transparent 3px),
+
+  radial-gradient(circle, rgba(255,220,80,.85) 1.5px, transparent 2px);
+
+  background-size:
+
+  110px 110px,
+
+  110px 110px,
+
+  55px 55px;
+
+  filter:drop-shadow(0 0 8px #5f68ff);
+
+}
+
+/* Dark overlay */
+
+.ai-root::after{
+
+  content:"";
+
+  position:absolute;
+
+  inset:0;
+
+  pointer-events:none;
+
+  background:
+
+  radial-gradient(circle at center,
+  transparent 0%,
+  rgba(10,10,18,.25) 55%,
+  rgba(10,10,18,.65) 100%);
+
+}
+.ai-header,
+.ai-empty,
+.chat-area,
+.chat-input{
+
+    position:relative;
+
+    z-index:2;
 
 }
