@@ -4,7 +4,7 @@
 
 ### AI-Powered Chrome Extension for Organizing & Learning from VIT Study Materials
 
-Automatically organize VTOP study materials, search lecture content, ask AI questions, generate revision notes, and create quizzes—all from a single Chrome side panel.
+Automatically organize VTOP study materials, search lecture content, ask AI questions, and generate AI-powered quizzes—all from a modern Chrome Side Panel.
 
 <br/>
 
@@ -23,49 +23,50 @@ Automatically organize VTOP study materials, search lecture content, ask AI ques
 
 # 📖 About
 
-VITAssist is a Chrome Extension built to improve the way VIT students manage and study course materials downloaded from VTOP.
+VITAssist is an AI-powered Chrome Extension designed to simplify how VIT students organize, search, and study course materials downloaded from VTOP.
 
-The extension automatically organizes downloaded PDFs and PowerPoint presentations, indexes their contents locally, and provides AI-assisted study tools such as semantic search, contextual question answering, revision note generation, and quiz generation.
+The extension automatically detects downloaded PDFs and PowerPoint presentations, organizes them by subject, extracts and indexes their contents locally, and provides intelligent study tools including semantic search, contextual question answering using Retrieval-Augmented Generation (RAG), AI-powered quiz generation, and an integrated study library—all accessible through a modern Chrome Side Panel.
 
 ---
 
 # ✨ Features
 
-- 📂 Automatically organizes downloaded VTOP study materials by subject
-- 🔎 Searches inside PDFs and PowerPoint presentations using lecture content
+- 📂 Automatically detects and organizes downloaded VTOP study materials by subject
+- 📄 Supports both PDF and PowerPoint lecture materials
+- 🔍 Full-text semantic search across indexed lecture content
 - 🤖 AI-powered Question Answering using Lightweight Retrieval-Augmented Generation (RAG)
-- 📚 Context-aware answers generated only from your downloaded study materials
-- 📝 Generate concise revision notes from individual lectures
-- 🧠 Generate multiple-choice quizzes from any selected lecture
-- 📖 Browse indexed study materials through an integrated library
-- ⚡ Chrome Side Panel workspace for quick access while studying
+- 🧠 AI-powered quiz generation from selected courses and lecture files
+- 📚 Context-aware AI responses generated only from your indexed study materials
+- 📖 Integrated Library for browsing and managing indexed resources
+- 🗑️ Per-file deletion with automatic cleanup of indexed data and metadata
+- ⚡ Modern Chrome Side Panel workspace for seamless studying
 
 ---
 
 # 🚀 Workflow
 
 ```text
-VTOP Download
-      │
-      ▼
-Automatic File Detection
-      │
-      ▼
-Organize by Subject
-      │
-      ▼
-PDF / PPT Parsing
-      │
-      ▼
-Local Content Index
-      │
-      ├──────────────┐
-      ▼              ▼
- Search         Ask AI (Lightweight RAG)
-      │              │
-      └──────┬───────┘
-             ▼
-      Notes & Quiz Generation
+                 VTOP Study Material
+                        │
+                        ▼
+            Automatic Download Detection
+                        │
+                        ▼
+         Rename & Organize by Subject
+                        │
+                        ▼
+              PDF / PPT Text Extraction
+                        │
+                        ▼
+           Local Searchable Content Index
+                        │
+      ┌─────────────────┼─────────────────┐
+      ▼                 ▼                 ▼
+   Library       Semantic Search      AI Features
+                                             │
+                                  ┌──────────┴──────────┐
+                                  ▼                     ▼
+                             Ask AI (RAG)       Quiz Generator
 ```
 
 ---
@@ -74,25 +75,27 @@ Local Content Index
 
 ## Ask AI
 
-Uses Lightweight Retrieval-Augmented Generation (RAG) to retrieve relevant sections from indexed lecture materials before sending the context to Gemini AI for accurate responses.
+Uses a Lightweight Retrieval-Augmented Generation (RAG) pipeline to retrieve the most relevant sections from locally indexed lecture materials before sending the context to Gemini AI. This enables accurate, lecture-specific responses while minimizing hallucinations.
 
 ---
 
-## Smart Search
+## Semantic Search
 
-Searches lecture contents instead of relying only on filenames, making it easier to find concepts across PDFs and presentations.
-
----
-
-## Revision Notes
-
-Generates concise AI-powered notes from individual lectures for quick revision.
+Searches the actual contents of PDFs and PowerPoint presentations instead of relying only on filenames, making it easy to locate concepts across all downloaded study materials.
 
 ---
 
-## Quiz Generator
+## AI Quiz Generator
 
-Creates multiple-choice quizzes with explanations based on the selected lecture.
+Generate AI-powered multiple-choice quizzes from any indexed lecture.
+
+Simply choose a course, select a PDF or PowerPoint presentation, and VITAssist uses Gemini AI to generate topic-specific quiz questions based solely on the selected lecture. This enables focused self-assessment and exam preparation for individual topics.
+
+---
+
+## Integrated Library
+
+Browse all indexed study materials organized by subject, quickly access downloaded resources, and remove files with automatic cleanup of associated indexed metadata.
 
 ---
 
@@ -113,14 +116,16 @@ Creates multiple-choice quizzes with explanations based on the selected lecture.
 ### Chrome Extension
 
 - Chrome Extension Manifest V3
-- Chrome Storage API
 - Chrome Downloads API
+- Chrome Storage API
 - Chrome Side Panel API
 
 ### Document Processing
 
 - PDF.js
 - Mammoth.js
+- JSZip
+- Tesseract.js
 
 ---
 
@@ -129,18 +134,21 @@ Creates multiple-choice quizzes with explanations based on the selected lecture.
 ```text
 src/
 │
-├── background/
-├── content/
 ├── popup/
 ├── sidepanel/
+│   ├── components/
+│   ├── tabs/
+│   └── styles/
 │
 ├── shared/
 │   ├── ai/
-│   ├── indexer/
 │   ├── parser/
 │   ├── search/
-│   └── storage/
+│   ├── storage/
+│   └── utils/
 │
+├── background.js
+├── content.js
 └── manifest.json
 ```
 
@@ -151,7 +159,13 @@ src/
 Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/VITAssist.git
+git clone https://github.com/Kikimoko/VITAssist.git
+```
+
+Navigate into the project
+
+```bash
+cd VITAssist
 ```
 
 Install dependencies
@@ -160,10 +174,10 @@ Install dependencies
 npm install
 ```
 
-Create a `.env`
+Create a `.env` file
 
 ```env
-VITE_GEMINI_API_KEY=YOUR_API_KEY
+VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
 
 Build the extension
@@ -172,10 +186,15 @@ Build the extension
 npm run build
 ```
 
-Load the generated `dist` folder as an unpacked extension from Chrome Extensions.
+Load the generated **dist** folder as an unpacked extension:
+
+1. Open **Google Chrome**
+2. Navigate to **chrome://extensions/**
+3. Enable **Developer Mode**
+4. Click **Load unpacked**
+5. Select the generated **dist** folder
 
 ---
-
 
 # 📸 Screenshots
 
@@ -187,16 +206,20 @@ Load the generated `dist` folder as an unpacked extension from Chrome Extensions
 |-------|----------|
 | ![](screenshots/search.png) | ![](screenshots/ask-ai.png) |
 
-| Notes | Quiz |
-|-------|----------|
-| ![](screenshots/notes.png) | ![](screenshots/quiz.png) |
+| Quiz Generator |
+|----------------|
+| ![](screenshots/quiz.png) |
+
+---
 
 # 🚀 Future Improvements
 
 - Improve semantic search ranking
-- Better OCR support for scanned PDFs
+- Better OCR support for scanned PDFs and presentations
 - Faster indexing for large libraries
-- Enhanced UI and user experience
+- Support additional document formats
+- AI-generated flashcards
+- Cloud synchronization across devices
 
 ---
 
@@ -204,7 +227,7 @@ Load the generated `dist` folder as an unpacked extension from Chrome Extensions
 
 **Kalyani Manoj**
 
-B.Tech Computer Science and Engineering (Information Security)
+B.Tech Computer Science and Engineering (Information Security)  
 VIT Vellore
 
 ---
@@ -226,4 +249,3 @@ Copyright © 2026 Kalyani Manoj.
 This repository is published for portfolio and educational viewing purposes only.
 
 No part of this source code may be copied, modified, redistributed, or reused without prior written permission from the author.
-
