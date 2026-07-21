@@ -25,7 +25,7 @@ Automatically organize VTOP study materials, search lecture content, ask AI ques
 
 VITAssist is an AI-powered Chrome Extension designed to simplify how VIT students organize, search, and study course materials downloaded from VTOP.
 
-The extension automatically detects downloaded PDFs and PowerPoint presentations, organizes them by subject, extracts and indexes their contents locally, and provides intelligent study tools including semantic search, contextual question answering using Retrieval-Augmented Generation (RAG) powered by Llama 3.3 70B through the Groq API, AI-powered quiz generation, and an integrated study library—all accessible through a modern Chrome Side Panel.
+The extension automatically detects downloaded PDFs and PowerPoint presentations, organizes them by subject, extracts and indexes their contents locally, and provides intelligent study tools including semantic search, contextual question answering using Lightweight Retrieval-Augmented Generation (RAG) powered by Llama 3.3 70B through the Groq API, AI-powered quiz generation, and an integrated study library—all accessible through a modern Chrome Side Panel.
 
 ---
 
