@@ -12,6 +12,7 @@ export const KEYS = {
   SUBJECTS:     "vitassist_subjects",      // { [subject]: { examDate: ISO string, color: string } }
   SETTINGS:     "vitassist_settings",      // { llmTier: string, notificationsEnabled: bool, lastPortalCheck: timestamp }
   PORTAL_CACHE: "vitassist_portal_cache",  // { fileList: string[], lastChecked: timestamp }
+  QUIZ_RESULTS: "vitassist_quiz_results",
 };
 
 // ─── FILE INDEX ──────────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ export async function getFileIndex() {
 }
 
 export async function addFileToIndex(filename, metadata) {
+
 
   const index = await getFileIndex();
 
@@ -128,10 +130,17 @@ export async function addFileToIndex(filename, metadata) {
       };
 
   }
-
   await chrome.storage.local.set({
-      [KEYS.FILE_INDEX]: index
-  });
+    [KEYS.FILE_INDEX]: index
+});
+
+const verify =
+    await chrome.storage.local.get(KEYS.FILE_INDEX);
+
+console.log("VERIFY INDEX ENTRY");
+console.log(
+    verify[KEYS.FILE_INDEX]?.[filename]
+);
 
 }
 export async function getFileMetadata(filename) {
@@ -288,6 +297,47 @@ export async function saveSummary(filename, bullets, llmTier) {
   const all = res[KEYS.SUMMARIES] || {};
   all[filename] = { bullets, llmTier, generatedAt: Date.now() };
   await chrome.storage.local.set({ [KEYS.SUMMARIES]: all });
+}
+// ─── QUIZ RESULTS ─────────────────────────────────────────────
+
+export async function saveQuizResult(filename, result) {
+
+  const res = await chrome.storage.local.get(KEYS.QUIZ_RESULTS);
+
+  const all = res[KEYS.QUIZ_RESULTS] || {};
+
+  if (!all[filename]) {
+
+      all[filename] = [];
+
+  }
+
+  all[filename].push(result);
+
+  await chrome.storage.local.set({
+
+      [KEYS.QUIZ_RESULTS]: all
+
+  });
+
+}
+
+export async function getQuizResults(filename) {
+
+  const res = await chrome.storage.local.get(KEYS.QUIZ_RESULTS);
+
+  const all = res[KEYS.QUIZ_RESULTS] || {};
+
+  return all[filename] || [];
+
+}
+
+export async function getAllQuizResults() {
+
+  const res = await chrome.storage.local.get(KEYS.QUIZ_RESULTS);
+
+  return res[KEYS.QUIZ_RESULTS] || {};
+
 }
 
 // ─── SUBJECTS (exam dates etc.) ───────────────────────────────────────────────

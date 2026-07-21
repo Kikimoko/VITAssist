@@ -33,10 +33,13 @@ export async function parseFile(arrayBuffer, extension) {
 
     } catch (err) {
 
-        console.error("[VITAssist] Parser failed:", err);
-
-        return EMPTY_RESULT;
-
+        console.error("========== PARSER FAILED ==========");
+        console.error("Extension:", extension);
+        console.error(err);
+        console.error(err.stack);
+        console.error("===================================");
+    
+        throw err;   // <-- temporarily
     }
 
 }

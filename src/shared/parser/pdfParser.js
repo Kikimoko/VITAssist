@@ -77,8 +77,6 @@ function cleanupTitle(title) {
         .replace(/^Page\s+\d+$/i, "")
         .replace(/^VIT$/i, "")
 .replace(/^Vellore Institute.*$/i, "")
-.replace(/^Cryptography and Network Security$/i, "Cryptography and Network Security")
-.replace(/^Cloud Architecture Design$/i, "Cloud Architecture Design")
         .trim();
 }
 
@@ -94,44 +92,69 @@ function extractModule(text) {
 
 function scoreTitle(line) {
 
-    let score = 0;
-
     line = normalize(line);
 
-    if (line.length < 5) return -100;
-    if (line.length > 90) return -100;
+    if (!line) return -999;
 
-    // Bad candidates
-    if (/^page\s+\d+$/i.test(line)) score -= 100;
-    if (/^slide\s+\d+$/i.test(line)) score -= 100;
-    if (/^https?:\/\//i.test(line)) score -= 100;
-    if (/^\d+$/.test(line)) score -= 100;
+    let score = 0;
 
-    if (/copyright/i.test(line)) score -= 40;
-    if (/department/i.test(line)) score -= 30;
-    if (/school/i.test(line)) score -= 30;
-    if (/faculty/i.test(line)) score -= 30;
-    if (/prof/i.test(line)) score -= 30;
-    if (/dr\./i.test(line)) score -= 30;
-    if (/vellore institute/i.test(line)) score -= 50;
-    if (/vit/i.test(line)) score -= 20;
+    // Length
+    if (line.length < 5) return -999;
+    if (line.length > 80) score -= 150;
 
-    // Good candidates
-    if (line.split(" ").length <= 8)
-        score += 25;
+    const lower = line.toLowerCase();
 
-    if (/^[A-Z0-9 ()\-&/,]+$/.test(line))
+    // ---------- Reject garbage ----------
+    if (/^page\s+\d+$/i.test(line)) score -= 500;
+    if (/^slide\s+\d+$/i.test(line)) score -= 500;
+    if (/^\d+$/.test(line)) score -= 500;
+
+    if (/copyright/i.test(lower)) score -= 1000;
+    if (/isbn/i.test(lower)) score -= 1000;
+    if (/all rights reserved/i.test(lower)) score -= 1000;
+    if (/published by/i.test(lower)) score -= 1000;
+
+    if (/ramez|elmasri|navathe|pearson|mcgraw|springer/i.test(lower))
+        score -= 1000;
+
+    if (/department|faculty|school|prof|dr\.|vellore institute/i.test(lower))
+        score -= 500;
+
+    // Course codes
+    if (/^[A-Z]{4}\d+[A-Z]?$/i.test(line))
+        score -= 800;
+
+    // ---------- Positive ----------
+    const words = line.split(/\s+/).length;
+
+    if (words >= 2 && words <= 8)
+        score += 120;
+
+    if (/^[A-Z]/.test(line))
+        score += 40;
+
+    if (!line.endsWith("."))
         score += 20;
 
-    if (
-        /^[A-Z]/.test(line) &&
-        !line.endsWith(".")
-    )
+    if (/[-:&]/.test(line))
         score += 10;
+        if (/module/i.test(lower))
+        score += 50;
+    
+    if (/chapter/i.test(lower))
+        score += 40;
+    
+    if (/unit/i.test(lower))
+        score += 40;
+    
+    if (/introduction/i.test(lower))
+        score += 30;
+    
+    if (/security|network|database|cloud|kernel|process|thread|memory/i.test(lower))
+        score += 20;
 
     return score;
 }
-
 function guessLectureTitle(lines) {
 
     let best = "";
@@ -139,22 +162,60 @@ function guessLectureTitle(lines) {
 
     for (const line of lines) {
 
-        const s = scoreTitle(line);
+        const score = scoreTitle(line);
 
-        if (s > bestScore) {
-
-            bestScore = s;
+        if (score > bestScore) {
+            bestScore = score;
             best = line;
+        }
+    }
+
+    best = cleanupTitle(best);
+
+if (!best)
+    return "";
+
+return best;
+}
+function chooseBestLectureTitle(pages) {
+
+    let best = "";
+    let bestScore = -999;
+
+    for (const page of pages) {
+
+        if (!page.title)
+            continue;
+
+        let score = scoreTitle(page.title);
+
+        // Prefer earlier pages
+        if (page.no === 1)
+            score += 30;
+        else if (page.no === 2)
+            score += 20;
+        else if (page.no === 3)
+            score += 10;
+
+        if (score > bestScore) {
+
+            bestScore = score;
+            best = page.title;
 
         }
 
     }
 
-    return cleanupTitle(best);
+    best = cleanupTitle(best);
+
+if (!best)
+    return "";
+
+return best;
 
 }
 export async function parsePDF(arrayBuffer) {
-
+    console.log("parsePDF called");
     const pdf = await pdfjsLib.getDocument({
         data: arrayBuffer
     }).promise;
@@ -182,9 +243,9 @@ export async function parsePDF(arrayBuffer) {
             lastY = item.transform[5];
         }
         pageText = pageText
-            .replace(/[ ]+\n/g, "\n")
-            .replace(/\n{3,}/g, "\n\n")
-            .trim();
+    .replace(/[ ]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
         // If almost no text was extracted, try OCR
 let usedOCR = false;
 if (pageText.length < 20) {
@@ -213,9 +274,12 @@ if (pageText.length < 20) {
             .map(normalize)
             .filter(Boolean);
 
-        const pageTitle =
-            guessLectureTitle(lines) ||
-            `Page ${i}`;
+            const title =
+            cleanupTitle(pptTitle) ||
+            cleanupTitle(
+                guessLectureTitle(lines.slice(0, 8))
+            ) ||
+            `Slide ${slides.length + 1}`;
 
         pages.push({
             no: i,
@@ -231,30 +295,38 @@ if (pageText.length < 20) {
     fullText += pageText + "\n";
 
     }
+    console.log("==========");
+    console.log("FINAL TITLE:", chooseBestLectureTitle(pages));
+    console.table(pages.map(p => ({
+        page: p.no,
+        title: p.title
+    })));
+    console.log("==========");
+    console.log({
+        fullTextLength: fullText.length,
+        pages: pages.length,
+        lectureTitle: chooseBestLectureTitle(pages)
+    });
+    
 
-    const firstPageLines =
-        pages.length
-            ? pages[0].text.split("\n").map(normalize).filter(Boolean)
-            : [];
+            return {
 
-
-    return {
-        lectureTitle:
-    pages.find(p => p.title && !/^Page\s+\d+$/i.test(p.title))
-        ?.title || "",
-
-        moduleNumber:
-            extractModule(fullText),
-
-        pageCount:
-            pdf.numPages,
-
-        pages,
-
-        fullText,
-
-        parsedAt:
-            Date.now(),
-    };
+                lectureTitle:
+                    chooseBestLectureTitle(pages),
+            
+                moduleNumber:
+                    extractModule(fullText),
+            
+                pageCount:
+                    pdf.numPages,
+            
+                pages,
+            
+                fullText,
+            
+                parsedAt:
+                    Date.now(),
+            
+            };
 
 }

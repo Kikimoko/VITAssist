@@ -44,7 +44,47 @@ const [checkingPending, setCheckingPending] = useState(true);
     inputRef.current?.focus();
   }, [initialQuery]);
   useEffect(() => {
+
     loadPendingFiles();
+
+    function onMessage(message) {
+
+        if (
+            message.type === "FILE_INDEXED" ||
+            message.type === "FILE_PARSED"
+        ) {
+            loadPendingFiles();
+        }
+
+    }
+
+    function onMessage(message) {
+
+      switch (message.type) {
+  
+          case "FILE_DOWNLOADED":
+  
+              indexLibrary();
+              break;
+  
+          case "FILE_INDEXED":
+  
+              loadPendingFiles();
+              break;
+  
+          case "FILE_PARSED":
+  
+              loadPendingFiles();
+              break;
+  
+      }
+  
+  }
+
+    return () => {
+        chrome.runtime.onMessage.removeListener(onMessage);
+    };
+
 }, []);
 
   async function handleSearch(e, overrideQuery) {
@@ -103,6 +143,9 @@ const [checkingPending, setCheckingPending] = useState(true);
         const index =
     (await chrome.storage.local.get("vitassist_file_index"))
         .vitassist_file_index || {};
+        console.log("===== FILE INDEX =====");
+console.log(index);
+console.log("======================");
 
         const pending = [];
 
@@ -125,9 +168,18 @@ const [checkingPending, setCheckingPending] = useState(true);
 
                     const relativePath = `VITAssist/${prefix}${name}`;
 
-                    const exists = Object.values(index).some(file =>
-                        file.path === relativePath
-                    );
+                    const indexedFile = Object.values(index).find(file =>
+                      file.path === relativePath
+                  );
+                  
+                  console.log("----------");
+                  console.log("Relative:", relativePath);
+                  console.log("Indexed:", indexedFile?.path);
+                  console.log("Parsed:", indexedFile?.parsed);
+                  console.log("Exists:", !!indexedFile);
+                  console.log("----------");
+                  
+                  const exists = !!indexedFile;
                     
                     if (!exists) {
                     

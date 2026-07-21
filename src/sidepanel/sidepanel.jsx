@@ -24,49 +24,24 @@ function SidePanelApp() {
   
   useEffect(() => {
 
-    (async () => {
-      try {
-        // Automatically index any newly downloaded files
-        await indexLibrary();
-      } catch (err) {
-        // First run / no folder selected yet
-        console.log("[VITAssist] Auto index skipped:", err.message);
-      }
-    })();
+    function onMessage(message) {
   
-    chrome.storage.local.get(
-      [
-        "vitassist_pending_search",
-        "vitassist_active_subject",
-        "vitassist_active_tab",
-      ],
-      (result) => {
+      if (message.type === "FILE_DOWNLOADED") {
   
-        if (result.vitassist_pending_search) {
-          setPendingSearch(result.vitassist_pending_search);
-          setActiveTab("Search");
-  
-          chrome.storage.local.remove(
-            "vitassist_pending_search"
-          );
-        }
-  
-        if (result.vitassist_active_tab) {
-          setActiveTab("Library");
-        }
-  
-        if (result.vitassist_active_subject) {
-          setActiveSubject(
-            result.vitassist_active_subject
-          );
-  
-          chrome.storage.local.remove(
-            "vitassist_active_subject"
-          );
-        }
+        indexLibrary()
+          .catch(console.error);
   
       }
-    );
+  
+    }
+  
+    chrome.runtime.onMessage.addListener(onMessage);
+  
+    return () => {
+  
+      chrome.runtime.onMessage.removeListener(onMessage);
+  
+    };
   
   }, []);
 

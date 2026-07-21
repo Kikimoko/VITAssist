@@ -20,6 +20,9 @@ export const KEYS = {
   }
   
   export async function addFileToIndex(filename, metadata) {
+    console.log("folderPath =", folderPath);
+console.log("cleanName =", cleanName);
+console.log("stored path =", `${folderPath}/${cleanName}`);
     const index = await getFileIndex();
   
     index[filename] = {
@@ -47,7 +50,13 @@ lastIndexed: Date.now(),
 
 dateAdded: metadata.dateAdded ?? Date.now(),
     };
-  
+    const verify =
+    await chrome.storage.local.get("vitassist_file_index");
+
+console.log(
+    "VERIFY INDEX ENTRY",
+    verify.vitassist_file_index?.[filename]
+);
     await chrome.storage.local.set({
       [KEYS.FILE_INDEX]: index,
     });

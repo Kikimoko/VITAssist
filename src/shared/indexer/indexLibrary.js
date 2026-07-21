@@ -79,12 +79,20 @@ export async function restoreFolderHandle() {
 
 if (permission !== "granted") {
 
-    permission =
-        await saved.requestPermission({
-            mode: "read"
-        });
-
+    const permission = await saved.queryPermission({
+        mode: "read"
+    });
+    
+    if (permission !== "granted") {
+        console.log("[VITAssist] Folder permission not granted.");
+        return false;
+    }
+    
+    folderHandle = saved;
+    return true;
 }
+
+
 
 if (permission !== "granted")
     return false;

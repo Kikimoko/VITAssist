@@ -26,11 +26,11 @@ body {
   overflow: hidden;
 }
 
-.sidepanel {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+.sidepanel{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
 }
 
 /* ── TOPBAR ── */
@@ -168,7 +168,12 @@ body {
 .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
 
 /* ── TAB CONTENT ── */
-.tab-content { flex: 1; display:flex; overflow: hidden; }
+.tab-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
 .tab-pane { height: 100%; overflow-y: auto; padding: 12px 14px; }
 
 /* ── SEARCH ── */
@@ -1237,6 +1242,8 @@ line-height:1.6;
   transition:.35s;
 
 }
+/* In sidepanel.css — replace the existing .quiz-home rule with this: */
+
 .quiz-home{
 
   max-width:400px;
@@ -1244,6 +1251,10 @@ line-height:1.6;
   margin:auto;
 
   padding:18px;
+
+  height:100%;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
 
 }
 

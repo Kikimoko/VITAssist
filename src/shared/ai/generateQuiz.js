@@ -3,6 +3,12 @@ import { askGroq } from "./groq";
 
 export async function generateQuiz(filename) {
     const file = await getFileMetadata(filename);
+    console.log("========== QUIZ FILE ==========");
+console.log(file);
+console.log("fullText length:", file?.fullText?.length);
+console.log("pages:", file?.pages?.length);
+console.log("slides:", file?.slides?.length);
+console.log("===============================");
 
     if (!file) {
         throw new Error("File not found.");
@@ -13,38 +19,58 @@ export async function generateQuiz(filename) {
         file.pages?.map(p => p.text).join("\n\n") ||
         file.slides?.map(s => s.text).join("\n\n") ||
         "";
+        console.log("Material length:", material.length);
+        console.log(material.substring(0, 500));
 
         const prompt = `
-        You are an exam question generator.
+        You are a university exam setter.
         
-        Based on the study material below, generate exactly 10 multiple-choice questions.
+        Your task is to generate questions ONLY from the STUDY MATERIAL.
         
-        Study Material:
+        DO NOT generate questions about:
+        - JSON
+        - formatting
+        - output format
+        - prompts
+        - instructions
+        - programming
+        - this request itself
+        
+        If the study material does not contain enough information,
+        generate fewer questions rather than inventing questions.
+        
+        ======================
+        STUDY MATERIAL
+        ======================
+        
         ${material}
+        
+        ======================
+        OUTPUT FORMAT
+        ======================
         
         Return ONLY valid JSON.
         
-        Format:
-        
         [
           {
-            "question": "Question text",
+            "question": "...",
             "options": [
-              "Option A",
-              "Option B",
-              "Option C",
-              "Option D"
+              "...",
+              "...",
+              "...",
+              "..."
             ],
-            "answer": "Option A"
+            "answer": 0,
+            "explanation": "..."
           }
         ]
         
         Rules:
-        - Return only JSON.
-        - Do not use markdown.
-        - Do not wrap the output in \`\`\`.
-        - Do not explain anything.
-        - Ensure the JSON is valid.
+        - answer must be the ZERO-BASED index.
+        - Exactly 4 options.
+        - Exactly one correct answer.
+        - Explanation must come from the study material.
+        - Do NOT ask about JSON, prompts, formatting, or these instructions.
         `;
 
     console.time("Groq");
@@ -57,15 +83,49 @@ export async function generateQuiz(filename) {
         .replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
-        console.log("========== GROQ RAW ==========");
-        console.log(text);
-        console.log("==============================");
-        const start = text.indexOf("[");
-        const end = text.lastIndexOf("]");
-        
-        if (start === -1 || end === -1) {
-            throw new Error("Groq did not return valid JSON.\n\n" + text);
+    console.log("========== GROQ RAW ==========");
+    console.log(text);
+    console.log("==============================");
+    const start = text.indexOf("[");
+    const end = text.lastIndexOf("]");
+
+    if (start === -1 || end === -1) {
+        throw new Error("Groq did not return valid JSON.\n\n" + text);
+    }
+
+    const quiz = JSON.parse(text.substring(start, end + 1));
+
+    return quiz.map(q => {
+
+        let answerIndex = q.answer;
+
+        // If Groq returned the option text
+        if (typeof answerIndex === "string") {
+
+            answerIndex = q.options.findIndex(
+                option =>
+                    option.trim().toLowerCase() ===
+                    q.answer.trim().toLowerCase()
+            );
+
         }
-        
-        return JSON.parse(text.substring(start, end + 1));
+
+        // If Groq returned "Option A"
+        if (answerIndex === -1 && typeof q.answer === "string") {
+
+            const match = q.answer.match(/option\s*([A-D])/i);
+
+            if (match) {
+                answerIndex =
+                    "ABCD".indexOf(match[1].toUpperCase());
+            }
+
+        }
+
+        return {
+            ...q,
+            answer: answerIndex
+        };
+
+    });
 }

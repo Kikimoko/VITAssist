@@ -11,6 +11,7 @@ import {
   savePortalCache,
   getSettings,
 } from "../shared/storage/storage.js";
+import { indexLibrary } from "../shared/indexer/indexLibrary.js";
 
 
 // ─── INSTALL / STARTUP ───────────────────────────────────────────────────────
@@ -113,7 +114,8 @@ async function createFileRecord({
   folderPath,
   pending,
 }) {
-
+  console.log("PATH STORED:");
+console.log(`${folderPath}/${cleanName}`);
   return await addFileToIndex(cleanName, {
 
     subject: course.name,
@@ -134,7 +136,7 @@ async function createFileRecord({
       pending?.extension ??
       cleanName.split(".").pop().toLowerCase(),
 
-    path: download.filename,
+      path: `VITAssist/${course.name}/${cleanName}`,
 
     folderPath,
 
@@ -214,9 +216,18 @@ await createFileRecord({
 
     console.log("[VITAssist] Indexed:", cleanName);
     chrome.runtime.sendMessage({
-      type: "PARSE_PENDING_FILE",
-      filename: cleanName,
+      type: "FILE_DOWNLOADED",
+      payload: {
+          filename: cleanName
+      }
   }).catch(() => {});
+
+chrome.runtime.sendMessage({
+  type: "FILE_DOWNLOADED",
+    payload: {
+        filename: cleanName
+    }
+}).catch(() => {});
 
   } catch (err) {
 

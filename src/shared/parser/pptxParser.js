@@ -19,25 +19,69 @@ function extractModule(text) {
 
 function scoreTitle(line) {
 
+  line = normalize(line);
+
+  if (!line) return -999;
+
   let score = 0;
 
-  if (line.length > 8) score += 3;
-  if (line.length < 70) score += 2;
+  // Length
+  if (line.length < 5) return -999;
+  if (line.length > 80) score -= 150;
 
-  if (/module/i.test(line)) score -= 5;
-  if (/copyright/i.test(line)) score -= 5;
-  if (/department/i.test(line)) score -= 5;
-  if (/school/i.test(line)) score -= 5;
-  if (/faculty/i.test(line)) score -= 5;
-  if (/dr\./i.test(line)) score -= 5;
-  if (/prof/i.test(line)) score -= 5;
+  const lower = line.toLowerCase();
 
-  if (/^[A-Z0-9 ()\-]+$/.test(line))
-    score += 5;
+  // ---------- Reject garbage ----------
+  if (/^page\s+\d+$/i.test(line)) score -= 500;
+  if (/^slide\s+\d+$/i.test(line)) score -= 500;
+  if (/^\d+$/.test(line)) score -= 500;
+
+  if (/copyright/i.test(lower)) score -= 1000;
+  if (/isbn/i.test(lower)) score -= 1000;
+  if (/all rights reserved/i.test(lower)) score -= 1000;
+  if (/published by/i.test(lower)) score -= 1000;
+
+  if (/ramez|elmasri|navathe|pearson|mcgraw|springer/i.test(lower))
+      score -= 1000;
+
+  if (/department|faculty|school|prof|dr\.|vellore institute/i.test(lower))
+      score -= 500;
+
+  // Course codes
+  if (/^[A-Z]{4}\d+[A-Z]?$/i.test(line))
+      score -= 800;
+
+  // ---------- Positive ----------
+  const words = line.split(/\s+/).length;
+
+  if (words >= 2 && words <= 8)
+      score += 120;
+
+  if (/^[A-Z]/.test(line))
+      score += 40;
+
+  if (!line.endsWith("."))
+      score += 20;
+
+  if (/[-:&]/.test(line))
+      score += 10;
+      if (/module/i.test(lower))
+      score += 50;
+  
+  if (/chapter/i.test(lower))
+      score += 40;
+  
+  if (/unit/i.test(lower))
+      score += 40;
+  
+  if (/introduction/i.test(lower))
+      score += 30;
+  
+  if (/security|network|database|cloud|kernel|process|thread|memory/i.test(lower))
+      score += 20;
 
   return score;
 }
-
 function guessLectureTitle(lines) {
 
   let best = "";
@@ -45,26 +89,85 @@ function guessLectureTitle(lines) {
 
   for (const line of lines) {
 
-    const s = scoreTitle(line);
+      const score = scoreTitle(line);
 
-    if (s > bestScore) {
-      bestScore = s;
-      best = line;
-    }
+      if (score > bestScore) {
+          bestScore = score;
+          best = line;
+      }
   }
 
-  return best;
+  best = cleanupTitle(best);
+
+if (!best)
+    return "";
+
+return best;
+}
+function chooseBestSlideTitle(slides) {
+
+  let best = "";
+  let bestScore = -999;
+
+  for (const slide of slides) {
+
+      if (!slide.title)
+          continue;
+
+      let score = scoreTitle(slide.title);
+
+      if (slide.no === 1)
+          score += 30;
+
+      if (score > bestScore) {
+
+          bestScore = score;
+          best = slide.title;
+
+      }
+
+  }
+
+  best = cleanupTitle(best);
+
+if (!best)
+    return "";
+
+return best;
+
 }
 
-function extractSlideText(xml) {
+function extractSlideContent(xml) {
 
   const parser = new DOMParser();
-
   const doc = parser.parseFromString(xml, "application/xml");
 
-  return Array.from(doc.getElementsByTagName("a:t"))
-      .map(node => node.textContent)
+  // Title placeholder
+  let title = "";
+
+  const spList = Array.from(doc.getElementsByTagName("p:sp"));
+
+  for (const sp of spList) {
+
+      const ph = sp.getElementsByTagName("p:ph")[0];
+
+      if (ph?.getAttribute("type") === "title") {
+
+          title = Array.from(sp.getElementsByTagName("a:t"))
+              .map(n => n.textContent)
+              .join(" ")
+              .trim();
+
+          break;
+      }
+  }
+
+  // Entire slide text
+  const text = Array.from(doc.getElementsByTagName("a:t"))
+      .map(n => n.textContent)
       .join("\n");
+
+  return { title, text };
 
 }
 function cleanupTitle(title) {
@@ -92,6 +195,19 @@ function cleanupTitle(title) {
 
       // remove page numbers
       .replace(/^Page\s+\d+$/i, "")
+      .replace(/^copyright.*$/i, "")
+.replace(/^isbn.*$/i, "")
+.replace(/^all rights reserved.*$/i, "")
+.replace(/^published by.*$/i, "")
+.replace(/^department.*$/i, "")
+.replace(/^school.*$/i, "")
+.replace(/^faculty.*$/i, "")
+.replace(/^prof\.?.*$/i, "")
+.replace(/^dr\.?.*$/i, "")
+.replace(/^BCSE\d+[A-Z]?$/i, "")
+.replace(/^Page\s+\d+$/i, "")
+.replace(/^Slide\s+\d+$/i, "")
+.replace(/[©®]/g, "")
 
       .trim();
 }
@@ -122,7 +238,7 @@ console.log(slideNames);
 
     const xml = await zip.file(slidePath).async("string");
 
-    const text = extractSlideText(xml);
+    const { title: pptTitle, text } = extractSlideContent(xml);
     console.log(
       "Characters:",
       text.length,
@@ -135,10 +251,9 @@ console.log(slideNames);
         .filter(Boolean);
 
         const title =
-        cleanupTitle(
-            guessLectureTitle(lines)
-        ) ||
-        `Slide ${slides.length + 1}`;
+    cleanupTitle(pptTitle) ||
+    cleanupTitle(guessLectureTitle(lines)) ||
+    `Slide ${slides.length + 1}`;
         if (text.trim().length < 5)
         continue;
         slides.push({
@@ -156,18 +271,11 @@ console.log(slideNames);
 
 }
 
-  const firstSlideLines = slides[0]?.text
-      .split("\n")
-      .map(normalize)
-      .filter(Boolean) || [];
-      console.log("FINAL SLIDES:", slides.length);
 
       return {
 
         lectureTitle:
-            slides.length
-                ? slides[0].title
-                : "",
+            chooseBestSlideTitle(slides),
     
         moduleNumber:
             extractModule(fullText),

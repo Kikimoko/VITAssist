@@ -9,52 +9,69 @@ export async function askAI(question, history = []) {
     const seen = new Set();
 
     context.forEach(c => {
-        const key = `${c.subject}-${c.page}`;
+
+        const key =
+            `${c.subject}-${c.lecture}-${c.text.substring(0, 200)}`;
 
         if (!seen.has(key)) {
             seen.add(key);
             unique.push(c);
         }
+
     });
 
     const formattedContext = unique
-        .map(c => `
+    .map((c, i) => `
+========== SOURCE ${i + 1} ==========
+
 Subject: ${c.subject}
 Lecture: ${c.lecture}
-Page: ${c.page}
+Module: ${c.module ?? "N/A"}
+Page/Slide: ${c.page ?? "Unknown"}
 
 ${c.text}
 `)
-        .join("\n-------------------------\n");
+    .join("\n\n");
 
     const previousConversation = history
         .slice(-6)
         .map(m => `${m.role}: ${m.text}`)
         .join("\n");
 
-    const prompt = `
+        const prompt = `
 You are VITAssist.
 
-You are helping a VIT student study.
+You are helping a VIT student prepare for exams.
 
-ONLY answer using the study material below.
+Use the supplied study material as your PRIMARY source.
 
-If the answer cannot be found, reply:
-"I couldn't find this in your downloaded notes."
+If multiple snippets discuss the same topic, combine them into one clear answer.
 
+If the notes only partially answer the question, explain what is available and mention any missing details.
+
+Only reply "I couldn't find this in your downloaded notes." if NONE of the supplied study material is relevant.
+
+Do NOT invent facts that contradict the notes.
+
+==========================
 STUDY MATERIAL
+==========================
 
 ${formattedContext}
 
-Previous Conversation
+==========================
+PREVIOUS CONVERSATION
+==========================
 
 ${previousConversation}
 
+==========================
 QUESTION
+==========================
 
 ${question}
 
-Answer in simple student-friendly language.
+Answer in clear student-friendly language using headings and bullet points whenever helpful.
 `;
 
     const answer = await askGroq(prompt);

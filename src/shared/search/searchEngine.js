@@ -48,11 +48,16 @@ function score(filename, file, query) {
 
     let localScore = 0;
 
-    if (title.includes(query))
-      localScore += 100;
+    const words = query.split(/\s+/);
 
-    if (text.includes(query))
-      localScore += 80;
+const titleHits =
+    words.filter(w => title.includes(w)).length;
+
+const textHits =
+    words.filter(w => text.includes(w)).length;
+
+localScore += titleHits * 50;
+localScore += textHits * 30;
 
       if (localScore > 0) {
 
@@ -98,20 +103,50 @@ function makeSnippet(text, query) {
   if (!text)
       return "";
 
+  // Clean OCR/PDF noise
+  text = text
+      .replace(/\r/g, " ")
+      .replace(/\n+/g, " ")
+      .replace(/\s+/g, " ")
+
+      // Remove slide/page labels
+      .replace(/Slide\s+\d+(\s*[-–]\s*\d+)?/gi, "")
+      .replace(/Page\s+\d+/gi, "")
+
+      // Remove copyright boilerplate
+      .replace(/Copyright\s*©.*?(?=[A-Z][a-z]|\.)/gi, "")
+      .replace(/All Rights Reserved\.?/gi, "")
+      .replace(/Vellore Institute of Technology/gi, "")
+      .trim();
+
   const lower = text.toLowerCase();
+  const q = query.toLowerCase();
 
-  const idx = lower.indexOf(query);
+  const idx = lower.indexOf(q);
 
-  if (idx === -1)
-      return text.substring(0, DEFAULT_SNIPPET);
+  // No match → return clean preview
+  if (idx === -1) {
 
-  const start = Math.max(0, idx - SNIPPET_PADDING);
-  const end = Math.min(
-      text.length,
-      idx + query.length + SNIPPET_PADDING
-  );
+      let preview = text.slice(0, DEFAULT_SNIPPET);
 
-  return "..." + text.substring(start, end) + "...";
+      if (preview.length < text.length)
+          preview += "...";
+
+      return preview;
+  }
+
+  const start = Math.max(0, idx - 80);
+  const end = Math.min(text.length, idx + q.length + 100);
+
+  let snippet = text.slice(start, end).trim();
+
+  if (start > 0)
+      snippet = "..." + snippet;
+
+  if (end < text.length)
+      snippet += "...";
+
+  return snippet;
 }
 
 export async function searchLibrary(query) {
